@@ -1,7 +1,28 @@
-version: '3.9'
+version: '3'
 
 services:
-  exchange_server:
+  db:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: exchange
+      POSTGRES_PASSWORD: exchange-password
+      POSTGRES_DB: exchange
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+  
+  exchange-server:
     build: .
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgresql://exchange:exchange-password@db/exchange
     ports:
       - "12345:12345"
+    volumes:
+      - .:/app
+    command: python server.py
+
+volumes:
+  postgres_data:
