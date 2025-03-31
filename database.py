@@ -160,30 +160,77 @@ class Database:
             return session.query(Order).filter_by(id=order_id).first()
 
     def cancel_order(self, order_id):
-        """取消未执行的订单"""
-        with self.session_scope() as session:
-            order = session.query(Order).filter_by(id=order_id).first()
-            if not order:
-                return False, "Order not found"
-
-            if order.canceled_at is not None or order.open_shares == 0:
-                return False, "Order is not open"
-
-            # 标记为已取消
-            order.canceled_at = datetime.datetime.utcnow()
-
-            # 处理退款/返还
-            if order.amount > 0:  # 买入订单 - 退款
-                refund_amount = abs(order.open_shares) * order.limit_price
+        """
+        Cancel an open order and refund/return appropriate assets.
+        Returns (success, error_message)
+        """
+        try:
+            with self.session_scope() as session:
+                # Get the order and verify it exists
+                order = session.query(Order).filter_by(id=order_id).first()
+                if not order:
+                    return False, "Order not found"
+                
+                # Check if the order has any open shares to cancel
+                if order.open_shares <= 0:
+                    return False, "Order has no open shares to cancel"
+                
+                # Record the cancellation time
+                cancel_time = int(time.time())
+                
+                # Get the account
                 account = session.query(Account).filter_by(id=order.account_id).first()
-                account.balance += refund_amount
-            else:  # 卖出订单 - 返还股票
-                self.update_position(order.symbol_name, order.account_id, abs(order.open_shares), session)
-
-            # 设置开放股数为0
-            order.open_shares = 0
-
-            return True, None
+                if not account:
+                    return False, "Account not found"
+                
+                # Refund for buy orders or return shares for sell orders
+                if order.amount > 0:  # Buy order
+                    # Calculate refund amount based on open shares and limit price
+                    refund_amount = order.open_shares * float(order.limit_price)
+                    
+                    # Update account balance
+                    self.logger.info(f"Refunding {refund_amount} to account {account.id} for canceled buy order {order_id}")
+                    account.balance += refund_amount
+                    session.add(account)
+                    
+                else:  # Sell order
+                    # Return shares to account position
+                    symbol = order.symbol
+                    return_shares = order.open_shares
+                    
+                    # Get or create position
+                    position = session.query(Position).filter_by(
+                        account_id=account.id, symbol_name=symbol).first()
+                    if position:
+                        self.logger.info(f"Returning {return_shares} shares of {symbol} to account {account.id} for canceled sell order {order_id}")
+                        position.amount += return_shares
+                        session.add(position)
+                    else:
+                        # Create new position if one doesn't exist
+                        self.logger.info(f"Creating new position with {return_shares} shares of {symbol} for account {account.id} from canceled sell order {order_id}")
+                        new_position = Position(account_id=account.id, symbol_name=symbol, amount=return_shares)
+                        session.add(new_position)
+                
+                # Update order status
+                canceled_shares = order.open_shares
+                order.open_shares = 0
+                order.canceled_time = cancel_time
+                order.canceled_shares = canceled_shares
+                session.add(order)
+                
+                # Remove from order book if necessary
+                # This might be a method call to matching_engine or order_book depending on your architecture
+                # self.matching_engine.remove_order_from_book(order_id)
+                
+                # Commit all changes
+                session.commit()
+                
+                return True, None
+                
+        except Exception as e:
+            session.rollback()
+            self.logger.error(f"Error canceling order {order_id}: {str(e)}")
+            return False, f"Error canceling order: {str(e)}"
 
     def get_buy_orders(self, symbol_name):
         """获取买入订单，按价格（降序）和时间（升序）排序"""

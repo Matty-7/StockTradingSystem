@@ -3,6 +3,7 @@ import socket
 import xml.etree.ElementTree as ET
 import xml.dom.minidom
 import io
+import time
 
 def generate_indent(level=1):
   """
@@ -46,9 +47,6 @@ def basic_order_transaction_test():
 
   return  str(len(xml_str)) + "\n" + xml_str
 
-
-
-
 def main():
     #Server address
     hostname = socket.gethostname()
@@ -56,7 +54,7 @@ def main():
 
     # Create the socket
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
+    
     try:
         client_socket.connect(server_address)
         print(f"Connected to server at {server_address}")
