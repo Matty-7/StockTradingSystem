@@ -12,7 +12,7 @@ def generate_indent(level=1):
 
 def basic_creation_test():
   """
-  171
+  173
   <?xml version="1.0" encoding="UTF-8"?>
   <create>
   <account id="123456" balance="1000"/>
@@ -51,7 +51,8 @@ def basic_order_transaction_test():
 
 def main():
     #Server address
-    server_address = ('vcm-46909.vm.duke.edu', 12345)
+    hostname = socket.gethostname()
+    server_address = (hostname, 12345)
 
     # Create the socket
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
