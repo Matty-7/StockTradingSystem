@@ -68,6 +68,14 @@ def main():
         response = client_socket.recv(4096)
         print(f"Server response:\n{response.decode('utf-8')}")
 
+        #Send XML to create an accoutn and a symbol. Should return an created tag for both.
+        #Expected : <results><created id="123456"/><created sym="SPY" id="123456"/></results>
+        xml_request = basic_creation_test()
+        client_socket.sendall(xml_request.encode('utf-8'))
+        print(f"Sent request:\n{xml_request}")
+        response = client_socket.recv(4096)
+        print(f"Server response:\n{response.decode('utf-8')}")
+
         #Send XML to make an order transaction.
         # should respond with results and an opened
         xml_request = basic_order_transaction_test()
