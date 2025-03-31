@@ -194,30 +194,11 @@ def test_transaction_result():
 
   return str(len(xml_str)) + "\n" + xml_str
 
-def test_transaction_matching_all():
-  """
-  """
-  #should create two accounts with account_id 1 and 2
+def test_transaction_matching_all(client_socket):
   send_xml_to_server(setup_test_transcation_matching(), client_socket)
-  #should create 3 buy orders from account_id=1
-  send_xml_to_server(test_transcation_matching1(), client_socket)
-  #should create 3 sell orders from account_id=2
+  send_xml_to_server(test_transaction_matching1(), client_socket)
   send_xml_to_server(test_transaction_matching2(), client_socket)
-
-  ### ADD TRANSACTION QUERIES BASED ON STATUS TO CHECK STATE
-
-  #should create 1 sell order
-  #This order would match with order status 1 and 2
-  #where order status 1 would have 200 executed and 100 open shares
-  # and  order status 2 would have 200 executed shares and no open shares
   send_xml_to_server(test_transaction_matching3(), client_socket)
-
-  #Queries the result of the previous transaction
-  #EXPECTED:
-  # <status id="7">
-  #   <executed shares="200" price="127" time="1519348325"/>
-  #   <executed shares="200" price="125" time="1519348326"/>
-  # </status>
   send_xml_to_server(test_transaction_result(), client_socket)
 
 def test_all_transaction_operations_setup():
@@ -272,6 +253,37 @@ def send_xml_to_server(xml_request, client_socket):
   print(f"Sent request:\n{xml_request}")
   response = client_socket.recv(4096)
   print(f"Server response:\n{response.decode('utf-8')}")
+
+def basic_order_transaction_test():
+  """
+  133
+  <?xml version="1.0" encoding="UTF-8"?>
+  <transactions id="123456">
+    <order sym="SPY" amount="10" limit="100"/>
+  </transactions>
+  """
+  xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n'
+  xml_str += '<transactions id="123456">\n'
+  xml_str += generate_indent() + '<order sym="SPY" amount="10" limit="100"/>\n'
+  xml_str += '</transactions>\n'
+
+  return str(len(xml_str)) + "\n" + xml_str
+
+def test_transaction_error_account_DNE():
+  """
+  135
+  <?xml version="1.0" encoding="UTF-8"?>
+  <transactions id="999999">
+    <order sym="SPY" amount="10" limit="100"/>
+  </transactions>
+  """
+  xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n'
+  xml_str += '<transactions id="999999">\n'
+  xml_str += generate_indent() + '<order sym="SPY" amount="10" limit="100"/>\n'
+  xml_str += '</transactions>\n'
+
+  return str(len(xml_str)) + "\n" + xml_str
+
 
 def main():
     #Server address
