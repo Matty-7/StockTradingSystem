@@ -2,14 +2,12 @@ import xml.etree.ElementTree as ET
 import time
 import datetime
 import logging
-import io
 
 class XMLHandler:
     def __init__(self, database, matching_engine):
         self.database = database
         self.matching_engine = matching_engine
         self.logger = logging.getLogger("XMLHandler")
-        self.cache = {}
     
     def process_request(self, xml_data):
         """Process XML request and return XML response"""
@@ -134,17 +132,3 @@ class XMLHandler:
                     results_root.append(ET.Element('error', {'id': trans_id, 'error': error}))
         
         return ET.tostring(results_root, encoding='utf-8').decode('utf-8')
-    
-    def process_large_request(self, xml_data):
-        """Process large XML requests using incremental parsing"""
-        context = ET.iterparse(io.StringIO(xml_data), events=("start", "end"))
-        results = []
-        
-        # Process the XML incrementally
-        for event, elem in context:
-            if event == "end" and elem.tag == "account":
-                # Process account element
-                # ...
-                elem.clear()  # Free memory
-                
-        return '<results>' + ''.join(results) + '</results>' 
