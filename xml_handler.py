@@ -96,19 +96,35 @@ class XMLHandler:
                     continue
 
                 try:
-                    amount = float(child.attrib.get('amount', '0'))
-                    limit = float(child.attrib.get('limit', '0'))
+                    amount_val = float(child.attrib.get('amount', '0'))
+                    limit_val = float(child.attrib.get('limit', '0'))
                 except ValueError:
                     error_elem = ET.SubElement(results_root, 'error')
                     error_elem.set('sym', sym)
                     error_elem.text = "Invalid amount or limit value"
                     continue
 
-                success, error, order = self.matching_engine.place_order(account_id, sym, amount, limit)
+                # Use original string attributes for response if possible, otherwise format floats
+                amount_str = child.attrib.get('amount', '0')
+                limit_str = child.attrib.get('limit', '0')
+
+                success, error_msg, order_obj = self.matching_engine.place_order(account_id, sym, amount_val, limit_val)
                 if success:
-                    results_root.append(ET.Element('opened', {'sym': sym, 'amount': amount, 'limit': limit, 'id': order.id}))
+                    # Convert all attribute values to strings
+                    results_root.append(ET.Element('opened', {
+                        'sym': sym, 
+                        'amount': amount_str, 
+                        'limit': limit_str, 
+                        'id': str(order_obj.id) # Convert order ID to string
+                    }))
                 else:
-                    results_root.append(ET.Element('error', {'sym': sym, 'amount': amount, 'limit': limit, 'error': error}))
+                    # Convert all attribute values to strings
+                    results_root.append(ET.Element('error', {
+                        'sym': sym, 
+                        'amount': amount_str, 
+                        'limit': limit_str, 
+                        'error': str(error_msg) # Ensure error message is a string
+                    }))
 
             elif child.tag == 'query':
                 trans_id = child.attrib.get('id')

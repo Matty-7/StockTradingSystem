@@ -1,6 +1,8 @@
 import threading
 import datetime
 import logging
+# Import Account and Position models (assuming they are in database.py)
+from database import Account, Position
 
 logger = logging.getLogger(__name__)
 
@@ -129,7 +131,8 @@ class MatchingEngine:
     def place_order(self, account_id, symbol, amount, limit_price):
         """Place an order and try to match it"""
         with self.database.session_scope() as session:
-            account = session.query(self.database.Account).filter_by(id=account_id).first()
+            # Use the imported Account model directly
+            account = session.query(Account).filter_by(id=account_id).first()
             if not account:
                 return False, "Account not found", None
             
@@ -143,7 +146,8 @@ class MatchingEngine:
                 account.balance -= cost
             else:  # Sell
                 # Check if shares are sufficient
-                position = session.query(self.database.Position).filter_by(
+                # Use the imported Position model directly
+                position = session.query(Position).filter_by(
                     account_id=account_id, symbol_name=symbol).first()
                 if not position or position.amount < abs(amount):
                     return False, "Insufficient shares", None
