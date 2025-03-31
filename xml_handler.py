@@ -122,13 +122,46 @@ class XMLHandler:
             
             elif child.tag == 'cancel':
                 trans_id = child.attrib.get('id')
-                success, error = self.database.cancel_order(int(trans_id))
-                
-                if success:
-                    order = self.database.get_order(int(trans_id))
-                    status_parts = order.get_status()
-                    results_root.append(ET.Element('canceled', {'id': trans_id}, status_parts))
-                else:
-                    results_root.append(ET.Element('error', {'id': trans_id, 'error': error}))
+                self.handle_cancel(trans_id, results_root)
         
         return ET.tostring(results_root, encoding='utf-8').decode('utf-8')
+    
+    def handle_cancel(self, trans_id, results):
+        """Handle a cancel request and append the result to the results list"""
+        try:
+            # Convert trans_id to integer
+            order_id = int(trans_id)
+            
+            # Attempt to cancel the order
+            success, error = self.database.cancel_order(order_id)
+            
+            if success:
+                # Get the updated order
+                order = self.database.get_order(order_id)
+                
+                # Start XML response
+                cancel_xml = f'<canceled id="{trans_id}">'
+                
+                # Add executed portions (if any)
+                executions = self.database.get_order_executions(order_id)
+                for execution in executions:
+                    # Format the time as integer seconds since epoch
+                    exec_time = int(execution.time.timestamp()) if hasattr(execution.time, 'timestamp') else int(execution.time)
+                    cancel_xml += f'<executed shares="{execution.shares}" price="{execution.price}" time="{exec_time}"/>'
+                
+                # Add canceled portion
+                if order.canceled_time:
+                    cancel_xml += f'<canceled shares="{order.canceled_shares}" time="{order.canceled_time}"/>'
+                    
+                # Close the tag
+                cancel_xml += '</canceled>'
+                
+                results.append(cancel_xml)
+            else:
+                # Error response
+                results.append(f'<error id="{trans_id}">{error}</error>')
+                
+        except Exception as e:
+            # Handle any exceptions
+            self.logger.error(f"Error processing cancel request for {trans_id}: {str(e)}")
+            results.append(f'<error id="{trans_id}">Internal error processing cancel request</error>')

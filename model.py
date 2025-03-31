@@ -12,7 +12,7 @@ class Account(Base):
     balance = Column(Float, nullable=False, default=0.0)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
-    # 关联关系
+    # Relationship
     positions = relationship("Position", back_populates="account")
     orders = relationship("Order", back_populates="account")
 
@@ -25,7 +25,7 @@ class Symbol(Base):
     name = Column(String, primary_key=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
-    # 关联关系
+    # Relationship
     positions = relationship("Position", back_populates="symbol")
     orders = relationship("Order", back_populates="symbol")
 
@@ -40,7 +40,7 @@ class Position(Base):
     symbol_name = Column(String, ForeignKey('symbols.name'), nullable=False)
     amount = Column(Float, nullable=False, default=0.0)
 
-    # 关联关系
+    # Relationship
     account = relationship("Account", back_populates="positions")
     symbol = relationship("Symbol", back_populates="positions")
 
@@ -57,13 +57,13 @@ class Order(Base):
     id = Column(Integer, primary_key=True)
     account_id = Column(String, ForeignKey('accounts.id'), nullable=False)
     symbol_name = Column(String, ForeignKey('symbols.name'), nullable=False)
-    amount = Column(Float, nullable=False)  # 正数表示买入，负数表示卖出
+    amount = Column(Float, nullable=False)  # Positive for buy, negative for sell
     limit_price = Column(Float, nullable=False)
-    open_shares = Column(Float, nullable=False)  # 未执行的股数
+    open_shares = Column(Float, nullable=False)  # Unexecuted shares
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
-    canceled_at = Column(DateTime, nullable=True)  # 取消时间，如果为空则未取消
+    canceled_at = Column(DateTime, nullable=True)  # Cancel time, if empty then not canceled
 
-    # 关联关系
+    # Relationship
     account = relationship("Account", back_populates="orders")
     symbol = relationship("Symbol", back_populates="orders")
     executions = relationship("Execution", back_populates="order")
@@ -80,14 +80,14 @@ class Execution(Base):
     price = Column(Float, nullable=False)
     executed_at = Column(DateTime, default=datetime.datetime.utcnow)
 
-    # 关联关系
+    # Relationship
     order = relationship("Order", back_populates="executions")
 
     def __repr__(self):
         return f"<Execution(order_id={self.order_id}, shares={self.shares}, price={self.price})>"
 
 def init_db(db_url):
-    """初始化数据库，创建所有表"""
+    """Initialize the database: create all tables"""
     engine = create_engine(db_url)
     Base.metadata.create_all(engine)
     return engine
