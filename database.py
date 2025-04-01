@@ -165,10 +165,17 @@ class Database:
         with self.session_scope() as session:
             return session.query(Order).filter_by(id=order_id).first()
 
-    def cancel_order(self, order_id):
+    def cancel_order(self, order_id, requesting_account_id):
         """
         Cancel an open order and refund/return appropriate assets.
-        Returns (success, error_message)
+        Checks if the requesting_account_id matches the order's account_id.
+
+        Args:
+            order_id (int): The ID of the order to cancel.
+            requesting_account_id (str): The ID of the account making the cancel request.
+
+        Returns:
+            (success, error_message)
         """
         try:
             with self.session_scope() as session:
@@ -177,6 +184,11 @@ class Database:
                 order = session.query(Order).filter_by(id=order_id).with_for_update().first()
                 if not order:
                     return False, "Order not found"
+
+                # === Permission Check ===
+                if order.account_id != requesting_account_id:
+                    self.logger.warning(f"Permission denied: Account {requesting_account_id} tried to cancel order {order_id} owned by {order.account_id}")
+                    return False, "Permission denied: Cannot cancel order belonging to another account"
 
                 # Check if the order has any open shares to cancel (positive for buy, negative for sell)
                 if order.open_shares == 0:
@@ -323,12 +335,12 @@ class Database:
             if close_session:
                 session.close()
 
-    def get_status(self, order, session=None):
+    def get_status(self, order_id, session=None):
         """
         Get order status information, including open, executed, and canceled parts.
 
         Args:
-            order (Order): The order object (must be managed by a session).
+            order_id (int): The ID of the order to get status for.
             session (Session, optional): The database session. If None, uses internal scope.
 
         Returns:
@@ -338,14 +350,22 @@ class Database:
         if session is None:
             session = self.Session()
             manage_session = True
-            session.add(order) # Ensure the object is attached if passed from outside
+            # session.add(order) # No longer needed as we fetch by ID
 
         results = []
         error_msg = None
+        order = None # Initialize order
 
         try:
+            # Fetch the order within the current session
+            order = session.query(Order).filter_by(id=order_id).first()
+
+            if not order:
+                error_msg = "Order not found"
+                return results, error_msg # Return empty results and error
+
             # Reload the order within the current session to ensure fresh data, especially relationships
-            session.refresh(order)
+            # session.refresh(order) # Refresh might not be needed if fetched fresh, but ensure relationships are loaded if accessed below
 
             # Add open status if applicable (not canceled and has open shares)
             if order.open_shares != 0 and order.canceled_at is None:
@@ -376,7 +396,7 @@ class Database:
                 results.append(f'<canceled shares="{canceled_shares}" time="{cancel_time}"/>')
 
         except Exception as e:
-            self.logger.exception(f"Error getting status for order {order.id}: {e}")
+            self.logger.exception(f"Error getting status for order {order_id}: {e}")
             error_msg = f"Error retrieving status: {e}"
             results = [] # Clear potentially partial results on error
         finally:

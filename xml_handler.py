@@ -172,19 +172,32 @@ class XMLHandler:
                 try:
                     order_id = int(trans_id)
                     logger.info(f"Querying status for order ID: {order_id} (Account: {account_id})")
-                    order = self.database.get_order(order_id)
+                    # order = self.database.get_order(order_id) # Don't fetch here, let get_status handle it
 
-                    if order:
+                    # First, check if the order exists and belongs to the user *without* fetching full status yet
+                    order_check = self.database.get_order(order_id) # Use existing simple fetch for check
+
+                    if order_check:
                         # Check if the order belongs to the requesting account
-                        if order.account_id != account_id:
-                            logger.warning(f"Account {account_id} attempted to query order {order_id} belonging to account {order.account_id}")
+                        if order_check.account_id != account_id:
+                            logger.warning(f"Account {account_id} attempted to query order {order_id} belonging to account {order_check.account_id}")
                             results_root.append(ET.Element('error', {'id': trans_id, 'error': "Permission denied: Order belongs to another account"}))
                             continue
 
-                        status_parts, error_msg = self.database.get_status(order)
+                        # Order exists and permission granted, now get the detailed status
+                        status_parts, error_msg = self.database.get_status(order_id) # Pass ID
                         if error_msg:
                             logger.error(f"Error getting status for order {order_id}: {error_msg}")
-                            results_root.append(ET.Element('error', {'id': trans_id, 'error': error_msg}))
+                            # Check if the error was 'Order not found' which shouldn't happen here but handle defensively
+                            if "Order not found" in error_msg:
+                                 results_root.append(ET.Element('error', {'id': trans_id, 'error': "Order not found"}))
+                            else:
+                                 results_root.append(ET.Element('error', {'id': trans_id, 'error': error_msg}))
+                        elif not status_parts and not error_msg: # Handle case where get_status returns empty list correctly
+                             logger.warning(f"get_status for order {order_id} returned no parts and no error.")
+                             # Decide what to return - perhaps an empty status or an internal error? Let's send empty status for now.
+                             status_element = ET.Element('status', {'id': trans_id})
+                             results_root.append(status_element)
                         else:
                             status_element = ET.Element('status', {'id': trans_id})
                             logger.debug(f"Order {order_id} status parts: {status_parts}")
@@ -219,17 +232,7 @@ class XMLHandler:
                 # Check permission before calling handle_cancel
                 try:
                     order_id_int = int(trans_id)
-                    order_to_cancel = self.database.get_order(order_id_int)
-                    if not order_to_cancel:
-                         logger.warning(f"Cancel failed: Order ID {trans_id} not found (Account: {account_id})")
-                         results_root.append(ET.Element('error', {'id': trans_id, 'error': "Order not found"}))
-                         continue
-                    if order_to_cancel.account_id != account_id:
-                        logger.warning(f"Account {account_id} attempted to cancel order {trans_id} belonging to account {order_to_cancel.account_id}")
-                        results_root.append(ET.Element('error', {'id': trans_id, 'error': "Permission denied: Order belongs to another account"}))
-                        continue
-
-                    # Permission granted, proceed with cancellation
+                    # Don't fetch order here. Let handle_cancel manage its session and checks.
                     logger.info(f"Attempting to cancel order ID: {trans_id} (Account: {account_id})")
                     self.handle_cancel(trans_id, results_root)
 
@@ -252,13 +255,22 @@ class XMLHandler:
         """Handle a cancel request and append the result XML element to results_root"""
         try:
             order_id = int(trans_id)
+            requesting_account_id = results_root.getparent().attrib.get('id') # Get account from parent <transactions> tag
+            if not requesting_account_id:
+                # This should ideally be caught earlier, but handle defensively
+                logger.error("Could not determine requesting account ID for cancel operation.")
+                error_elem = ET.SubElement(results_root, 'error', {'id': trans_id})
+                error_elem.text = "Internal error: Missing account context for cancel."
+                return
+
         except ValueError:
             error_elem = ET.SubElement(results_root, 'error', {'id': trans_id})
             error_elem.text = "Invalid transaction ID format"
             return
 
         try:
-            success, error_msg = self.database.cancel_order(order_id)
+            # Pass requesting account ID for permission check inside cancel_order
+            success, error_msg = self.database.cancel_order(order_id, requesting_account_id)
 
             if success:
                 # Get the updated order status to build the response
