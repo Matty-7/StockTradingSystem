@@ -128,7 +128,6 @@ def test_transaction_matching1():
     <order sym="AMZN" amount="300" limit="125"/>
     <order sym="AMZN" amount="200" limit="127"/>
     <order sym="AMZN" amount="400" limit="125"/>
-    </symbol>
   </transactions>
   """
   xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n'
@@ -136,7 +135,6 @@ def test_transaction_matching1():
   xml_str += generate_indent()  + '<order sym="AMZN" amount="300" limit="125"/>\n'  #status id=1
   xml_str += generate_indent()  + '<order sym="AMZN" amount="200" limit="127"/>\n'  #status id=2
   xml_str += generate_indent()  + '<order sym="AMZN" amount="400" limit="125"/>\n'  #status id=3
-  xml_str += generate_indent()  + '</symbol>\n'
   xml_str += '</transactions>\n'
 
   return  str(len(xml_str)) + "\n" + xml_str
@@ -149,7 +147,6 @@ def test_transaction_matching2():
     <order sym="AMZN" amount="-100" limit="130"/>
     <order sym="AMZN" amount="-500" limit="128"/>
     <order sym="AMZN" amount="-200" limit="140"/>
-    </symbol>
   </transactions>
   """
   xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n'
@@ -157,7 +154,6 @@ def test_transaction_matching2():
   xml_str += generate_indent()  + '<order sym="AMZN" amount="-100" limit="130"/>\n'  #status id=4
   xml_str += generate_indent()  + '<order sym="AMZN" amount="-500" limit="128"/>\n'  #status id=5
   xml_str += generate_indent()  + '<order sym="AMZN" amount="-200" limit="140"/>\n'  #status id=6
-  xml_str += generate_indent()  + '</symbol>\n'
   xml_str += '</transactions>\n'
 
   return str(len(xml_str)) + "\n" + xml_str
@@ -168,13 +164,11 @@ def test_transaction_matching3():
   <?xml version="1.0" encoding="UTF-8"?>
   <transactions id="2">
     <order sym="AMZN" amount="-400" limit="124"/>
-    </symbol>
   </transactions>
   """
   xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n'
   xml_str += '<transactions id="2">\n'
   xml_str += generate_indent()  + '<order sym="AMZN" amount="-400" limit="124"/>\n'  #status id=7
-  xml_str += generate_indent()  + '</symbol>\n'
   xml_str += '</transactions>\n'
 
   return str(len(xml_str)) + "\n" + xml_str
@@ -249,10 +243,12 @@ def send_xml_to_server(xml_request, client_socket):
   """
   Sends the XML string to the Server listening on PORT 12345
   """
+  print("--------------------------------------------------")
   client_socket.sendall(xml_request.encode('utf-8'))
   print(f"Sent request:\n{xml_request}")
   response = client_socket.recv(4096)
   print(f"Server response:\n{response.decode('utf-8')}")
+  print("--------------------------------------------------\n")
 
 def basic_order_transaction_test():
   """
