@@ -354,8 +354,8 @@ def test_transaction_error_account_DNE():
 
 def main():
     #Server address
-    #hostname = socket.gethostname()
-    hostname = "vcm-46756.vm.duke.edu"
+    hostname = socket.gethostname()
+    #hostname = "vcm-46756.vm.duke.edu"
     server_address = (hostname, 12345)
 
     # Create the socket
