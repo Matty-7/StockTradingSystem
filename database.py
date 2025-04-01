@@ -14,13 +14,14 @@ logging.basicConfig(level=logging.INFO)
 class Database:
     def __init__(self, db_url="postgresql://username:password@localhost/exchange"):
         """initialize the database connection"""
-        self.engine = init_db(db_url)
+        self.db_url = db_url # Store the db_url
+        self.engine = init_db(self.db_url)
         self.Session = scoped_session(sessionmaker(bind=self.engine))
         self.logger = logging.getLogger(__name__) # Add logger instance
 
     def reset(self):
         """Reset the database (drop and recreate tables)"""
-        reset_db(self.db_url)
+        reset_db(self.db_url) # Use the stored db_url
         self.engine = init_db(self.db_url)
 
     @contextmanager

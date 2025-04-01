@@ -140,36 +140,65 @@ class MatchingEngine:
 
     def place_order(self, account_id, symbol, amount, limit_price):
         """Place an order and try to match it"""
-        with self.database.session_scope() as session:
-            # Use the imported Account model directly
-            account = session.query(Account).filter_by(id=account_id).first()
-            if not account:
-                return False, "Account not found", None
+        order_id = None # Initialize order_id
+        success = False
+        error_msg = None
 
-            # Buy order, check if balance is sufficient
-            if amount > 0:  # Buy
-                cost = amount * float(limit_price)
-                if account.balance < cost:
-                    return False, "Insufficient funds", None
+        # Acquire lock before starting the order placement and matching process
+        with self.lock:
+            try:
+                with self.database.session_scope() as session:
+                    # Use the imported Account model directly
+                    account = session.query(Account).filter_by(id=account_id).with_for_update().first()
+                    if not account:
+                        error_msg = "Account not found"
+                        return success, error_msg, order_id # Return False, msg, None
 
-                # Deduct balance
-                account.balance -= cost
-            else:  # Sell
-                # Check if shares are sufficient
-                # Use the imported Position model directly
-                position = session.query(Position).filter_by(
-                    account_id=account_id, symbol_name=symbol).first()
-                if not position or position.amount < abs(amount):
-                    return False, "Insufficient shares", None
+                    # Buy order, check if balance is sufficient
+                    if amount > 0:  # Buy
+                        cost = amount * float(limit_price)
+                        if account.balance < cost:
+                            error_msg = "Insufficient funds"
+                            return success, error_msg, order_id # Return False, msg, None
 
-                # Deduct shares
-                position.amount += amount  # amount is negative
+                        # Deduct balance (optimistically, within transaction)
+                        self.logger.info(f"Deducting {cost} from account {account_id} for potential buy order")
+                        account.balance -= cost
+                        session.add(account)
+                    else:  # Sell
+                        # Check if shares are sufficient
+                        # Use the imported Position model directly
+                        position = session.query(Position).filter_by(
+                            account_id=account_id, symbol_name=symbol).with_for_update().first()
+                        if not position or position.amount < abs(amount):
+                            error_msg = "Insufficient shares"
+                            return success, error_msg, order_id # Return False, msg, None
 
-            # Create order
-            order = self.database.create_order(account_id, symbol, amount, limit_price)
-            session.add(order)
-            # Try to match the order
-            order_id = order.id
-            self.match_orders(order, session)
+                        # Deduct shares (optimistically, within transaction)
+                        self.logger.info(f"Deducting {abs(amount)} shares of {symbol} from account {account_id} for potential sell order")
+                        position.amount += amount  # amount is negative
+                        session.add(position)
 
-        return True, None, order_id
+                    # Create order
+                    order = self.database.create_order(account_id, symbol, amount, limit_price)
+                    session.add(order)
+                    session.flush() # Flush to get the order ID before matching
+                    order_id = order.id
+                    self.logger.info(f"Created order {order_id}. Attempting match.")
+
+                    # Try to match the order within the same transaction
+                    self.match_orders(order, session)
+
+                    # If we reached here without exceptions, the DB transaction will commit
+                    success = True
+                    self.logger.info(f"Order {order_id} placed and matched successfully (or added to book).")
+
+            except Exception as e:
+                # Log the exception that occurred within the transaction scope
+                self.logger.exception(f"Error during place_order for account {account_id}, symbol {symbol}: {e}")
+                error_msg = f"Internal server error during order placement: {str(e)}"
+                # success remains False, order_id might be None or the generated ID
+                # The transaction will be rolled back by session_scope
+
+        # Return the final status outside the lock and session scope
+        return success, error_msg, order_id
