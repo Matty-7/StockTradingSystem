@@ -308,3 +308,30 @@ class Database:
         finally:
             if close_session:
                 session.close()
+
+    def get_status(self, order, session=None):
+        """
+        Get order status for XML response
+
+        Returns:
+            list: XML elements representing order status
+        """
+        if session is None:
+            session = self.Session()
+            session.add(order)
+            close_session = True
+        result = []
+
+        # Add open status if open
+        if order.open_shares != 0 and order.canceled_at is None:
+            result.append(f'<open shares="{abs(order.open_shares)}"/>')
+
+        # Add canceled status if canceled
+        if order.canceled_at is not None:
+            result.append(f'<canceled shares="{abs(order.amount) - sum(e[0] for e in order.executions)}" time="{int(order.canceled_at.timestamp())}"/>')
+
+        # Add execution statuses
+        for execution in order.executions:
+            result.append(f'<executed shares="{execution.shares}" price="{execution.price}" time="{int(execution.executed_at.timestamp())}"/>')
+
+        return result

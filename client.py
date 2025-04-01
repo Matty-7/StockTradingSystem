@@ -183,7 +183,7 @@ def test_transaction_result():
   """
   xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n'
   xml_str += '<transactions id="2">\n'
-  xml_str += generate_indent()  + '<query id="7">\n'  #Or the corresponding status ID here.
+  xml_str += generate_indent()  + '<query id="7"/>\n'  #Or the corresponding status ID here.
   xml_str += '</transactions>\n'
 
   return str(len(xml_str)) + "\n" + xml_str
@@ -210,8 +210,8 @@ def test_all_transaction_operations_setup():
 def test_all_transaction_operation_order_buy():
   xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n'
   xml_str += '<transactions id="3">\n'
-  xml_str += generate_indent()  + '<order sym="GOOG" amount="100" limit="123">\n'
-  xml_str += generate_indent()  + '<order sym="GOOG" amount="100" limit="0">\n'
+  xml_str += generate_indent()  + '<order sym="GOOG" amount="100" limit="123"/>\n'
+  xml_str += generate_indent()  + '<order sym="GOOG" amount="100" limit="0"/>\n'
   xml_str += '</transactions>\n'
 
   return str(len(xml_str)) + "\n" + xml_str
@@ -219,7 +219,7 @@ def test_all_transaction_operation_order_buy():
 def test_all_transaction_operation_order_sell():
   xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n'
   xml_str += '<transactions id="4">\n'
-  xml_str += generate_indent()  + '<order sym="GOOG" amount="-50" limit="123">\n'
+  xml_str += generate_indent()  + '<order sym="GOOG" amount="-50" limit="123"/>\n'
   xml_str += '</transactions>\n'
 
   return str(len(xml_str)) + "\n" + xml_str

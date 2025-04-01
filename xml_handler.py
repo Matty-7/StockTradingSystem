@@ -133,13 +133,17 @@ class XMLHandler:
 
             elif child.tag == 'query':
                 trans_id = child.attrib.get('id')
-                print("7\n")
-                print(trans_id)
                 order = self.database.get_order(int(trans_id))
 
                 if order:
-                    status_parts = order.get_status()
-                    results_root.append(ET.Element('status', {'id': trans_id}, status_parts))
+                    status_parts = self.database.get_status(order)
+                    status_element = ET.Element('status', {'id': trans_id})
+
+                    for part in status_parts:
+                        part_element =ET.fromstring(part)
+                        status_element.append(part_element)
+
+                    results_root.append(status_element)
                 else:
                     results_root.append(ET.Element('error', {'id': trans_id}))
 
@@ -148,6 +152,7 @@ class XMLHandler:
                 self.handle_cancel(trans_id, results_root)
 
         return ET.tostring(results_root, encoding='utf-8').decode('utf-8')
+
 
     def handle_cancel(self, trans_id, results):
         """Handle a cancel request and append the result to the results list"""
@@ -188,3 +193,4 @@ class XMLHandler:
             # Handle any exceptions
             self.logger.error(f"Error processing cancel request for {trans_id}: {str(e)}")
             results.append(f'<error id="{trans_id}">Internal error processing cancel request</error>')
+

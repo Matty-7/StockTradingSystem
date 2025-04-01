@@ -131,6 +131,7 @@ class MatchingEngine:
                 self.database.remove_order(opposite_order.id)
                 logger.info(f"Removed fully executed order {opposite_order.id} from order book")
 
+        session.add(new_order)
         # If new order still has shares to match, add it to the order book
         if new_order.open_shares > 0:
             self.database.add_order(new_order)
