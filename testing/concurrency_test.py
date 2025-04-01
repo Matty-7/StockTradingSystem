@@ -141,20 +141,6 @@ def execute_cancel(account_id, order_id, client_socket):
     
     return send_xml_to_server(str(len(xml_str)) + "\n" + xml_str, client_socket)
 
-def test_account_consistency(client_socket):
-    """Check account consistency after testing"""
-    print("\nChecking account consistency...")
-    
-    for i in range(1, TEST_ACCOUNTS + 1):
-        account_id = f"concurrent{i}"
-        # Query account balance and position
-        query_account(account_id, client_socket)
-
-def query_account(account_id, client_socket):
-    """Helper method to query account information (implementation depends on system)"""
-    # Example only - actual implementation depends on your system
-    print(f"Checking consistency for account {account_id} (needs implementation based on actual system)")
-
 def run_concurrency_test():
     """Run complete concurrency test"""
     hostname = socket.gethostname()
