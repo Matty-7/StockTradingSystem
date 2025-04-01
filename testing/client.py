@@ -111,8 +111,8 @@ def setup_test_transcation_matching():
   """
   xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n'
   xml_str += '<create>\n'
-  xml_str += generate_indent()  + '<account id="1" balance="100000"/>\n'
-  xml_str += generate_indent()  + '<account id="2" balance="100000"/>\n'
+  xml_str += generate_indent()  + '<account id="1" balance="1000000"/>\n'
+  xml_str += generate_indent()  + '<account id="2" balance="1000000"/>\n'
   xml_str += generate_indent()  + '<symbol sym="AMZN">\n'
   xml_str += generate_indent(2) + '<account id="2">100000</account>\n'
   xml_str += generate_indent()  + '</symbol>\n'
@@ -188,17 +188,40 @@ def test_transaction_result():
 
   return str(len(xml_str)) + "\n" + xml_str
 
+def show_sell_state():
+  xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n'
+  xml_str += '<transactions id="2">\n'
+  xml_str += generate_indent()  + '<query id="5"/>\n'
+  xml_str += generate_indent()  + '<query id="6"/>\n'
+  xml_str += generate_indent()  + '<query id="7"/>\n'
+  xml_str += '</transactions>\n'
+
+  return str(len(xml_str)) + "\n" + xml_str
+
+def show_buy_state():
+  xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n'
+  xml_str += '<transactions id="1">\n'
+  xml_str += generate_indent()  + '<query id="2"/>\n'
+  xml_str += generate_indent()  + '<query id="3"/>\n'
+  xml_str += generate_indent()  + '<query id="4"/>\n'
+  xml_str += '</transactions>\n'
+
+  return str(len(xml_str)) + "\n" + xml_str
+
+
 def test_transaction_matching_all(client_socket):
   send_xml_to_server(setup_test_transcation_matching(), client_socket)
   send_xml_to_server(test_transaction_matching1(), client_socket)
   send_xml_to_server(test_transaction_matching2(), client_socket)
   send_xml_to_server(test_transaction_matching3(), client_socket)
   send_xml_to_server(test_transaction_result(), client_socket)
+  send_xml_to_server(show_buy_state(), client_socket)
+  send_xml_to_server(show_sell_state(), client_socket)
 
 def test_all_transaction_operations_setup():
   xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n'
   xml_str += '<create>\n'
-  xml_str += generate_indent()  + '<account id="3" balance="100000"/>\n'
+  xml_str += generate_indent()  + '<account id="3" balance="200000"/>\n'
   xml_str += generate_indent()  + '<account id="4" balance="100000"/>\n'
   xml_str += generate_indent()  + '<symbol sym="GOOG">\n'
   xml_str += generate_indent(2) + '<account id="4">100000</account>\n'
@@ -331,7 +354,8 @@ def test_transaction_error_account_DNE():
 
 def main():
     #Server address
-    hostname = socket.gethostname()
+    #hostname = socket.gethostname()
+    hostname = "vcm-46756.vm.duke.edu"
     server_address = (hostname, 12345)
 
     # Create the socket
