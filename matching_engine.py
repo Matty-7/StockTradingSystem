@@ -30,19 +30,15 @@ class MatchingEngine:
         # Get the opposite side orders (sell orders for a buy, buy orders for a sell)
         # opposite_orders = self.database.get_orders(new_order.symbol, not is_buy)
         if is_buy:
-            opposite_orders = self.database.get_sell_orders(new_order.symbol_name)
+            opposite_orders = self.database.get_sell_orders(new_order.symbol_name, session)
         else:
-            opposite_orders = self.database.get_buy_orders(new_order.symbol_name)
+            opposite_orders = self.database.get_buy_orders(new_order.symbol_name, session)
 
-        session.add(new_order)
         if not opposite_orders:
             logger.info(f"No matching orders found for order {new_order.id}")
             return executed_orders
 
         logger.info(f"Found {len(opposite_orders)} potential matching orders")
-
-        for order in opposite_orders:
-            session.add(order)
 
         # Sort orders by price (best price first) and then by time (oldest first)
         # For buy orders, we want to match with sell orders sorted by lowest price
@@ -51,7 +47,7 @@ class MatchingEngine:
             opposite_orders.sort(key=lambda x: (float(x.limit_price), x.created_at))
         else:
             opposite_orders.sort(key=lambda x: (-float(x.limit_price), x.created_at))
-        session.add(new_order)
+        
         # Use open_shares as it reflects the current state
         remaining_shares = abs(new_order.open_shares)
 
@@ -83,8 +79,6 @@ class MatchingEngine:
             execution_price = opposite_order.limit_price if opposite_order.created_at < new_order.created_at else new_order.limit_price
             logger.info(f"Execution price: {execution_price} (based on older order: {opposite_order.id if opposite_order.created_at < new_order.created_at else new_order.id})")
 
-            # Start a database transaction to ensure atomicity
-            #with self.database.session_scope() as session:
             # Execute the orders
             buyer_id = new_order.account_id if is_buy else opposite_order.account_id
             seller_id = opposite_order.account_id if is_buy else new_order.account_id
@@ -132,7 +126,6 @@ class MatchingEngine:
                 # No explicit removal needed, query filters handle it
                 logger.info(f"Removed fully executed order {opposite_order.id} from order book")
 
-        session.add(new_order)
         # If new order still has shares to match, add it to the order book
         if new_order.open_shares != 0: # Check against 0, works for both buy/sell
             # No explicit add needed, session commit handles persistence
@@ -159,6 +152,7 @@ class MatchingEngine:
                     # Buy order, check if balance is sufficient
                     if amount > 0:  # Buy
                         cost = amount * float(limit_price)
+                        # Allow order if balance is exactly equal to cost or greater
                         if account.balance < cost:
                             error_msg = "Insufficient funds"
                             return success, error_msg, order_id # Return False, msg, None
@@ -166,7 +160,6 @@ class MatchingEngine:
                         # Deduct balance (optimistically, within transaction)
                         self.logger.info(f"Deducting {cost} from account {account_id} for potential buy order")
                         account.balance -= cost
-                        session.add(account)
                     else:  # Sell
                         # Check if shares are sufficient
                         # Use the imported Position model directly
@@ -179,11 +172,9 @@ class MatchingEngine:
                         # Deduct shares (optimistically, within transaction)
                         self.logger.info(f"Deducting {abs(amount)} shares of {symbol} from account {account_id} for potential sell order")
                         position.amount += amount  # amount is negative
-                        session.add(position)
 
                     # Create order
-                    order = self.database.create_order(account_id, symbol, amount, limit_price)
-                    session.add(order)
+                    order = self.database.create_order(account_id, symbol, amount, limit_price, session)
                     session.flush() # Flush to get the order ID before matching
                     order_id = order.id
                     self.logger.info(f"Created order {order_id}. Attempting match.")
