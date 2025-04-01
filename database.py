@@ -365,7 +365,7 @@ class Database:
                 return results, error_msg # Return empty results and error
 
             # Reload the order within the current session to ensure fresh data, especially relationships
-            # session.refresh(order) # Refresh might not be needed if fetched fresh, but ensure relationships are loaded if accessed below
+            session.refresh(order) # Removed: Fetching fresh should be sufficient, accessing relationships triggers loading
 
             # Add open status if applicable (not canceled and has open shares)
             if order.open_shares != 0 and order.canceled_at is None:

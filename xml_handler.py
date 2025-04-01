@@ -44,12 +44,16 @@ class XMLHandler:
     def handle_create(self, root):
         """Handle create requests"""
         results_root = ET.Element('results')
+        logger.info("Handling create request") # Use logger
 
         for child in root:
             if child.tag == 'account':
                 account_id = child.attrib.get('id')
                 balance = child.attrib.get('balance')
-
+                if account_id is None or balance is None:
+                     logger.warning("Create account missing id or balance") # Use logger
+                     # Add error element
+                     continue
                 success, error = self.database.create_account(account_id, float(balance))
                 if success:
                     created = ET.SubElement(results_root, 'created')
@@ -61,7 +65,10 @@ class XMLHandler:
 
             elif child.tag == 'symbol':
                 symbol = child.attrib.get('sym')
-
+                if child.attrib.get('sym') is None:
+                     logger.warning("Create symbol missing sym attribute") # Use logger
+                     # Add error element
+                     continue
                 for account_elem in child:
                     if account_elem.tag == 'account':
                         account_id = account_elem.attrib.get('id')
@@ -78,6 +85,7 @@ class XMLHandler:
                             error_elem.set('id', account_id)
                             error_elem.text = error
 
+        logger.debug("Finished handling create request") # Use logger
         return ET.tostring(results_root, encoding='utf-8').decode('utf-8')
 
     def handle_transactions(self, root):
@@ -232,9 +240,9 @@ class XMLHandler:
                 # Check permission before calling handle_cancel
                 try:
                     order_id_int = int(trans_id)
-                    # Don't fetch order here. Let handle_cancel manage its session and checks.
+                    # Call handle_cancel with the account ID
                     logger.info(f"Attempting to cancel order ID: {trans_id} (Account: {account_id})")
-                    self.handle_cancel(trans_id, results_root)
+                    self.handle_cancel(trans_id, results_root, account_id)
 
                 except ValueError:
                     logger.warning(f"Invalid transaction ID format '{trans_id}' in cancel for account {account_id}")
@@ -251,19 +259,22 @@ class XMLHandler:
         logger.debug(f"Sending response for account {account_id}: {response_str[:500]}...")
         return response_str
 
-    def handle_cancel(self, trans_id, results_root):
+    def handle_cancel(self, trans_id, results_root, requesting_account_id):
         """Handle a cancel request and append the result XML element to results_root"""
         try:
             order_id = int(trans_id)
-            requesting_account_id = results_root.getparent().attrib.get('id') # Get account from parent <transactions> tag
+
+            # Now use the provided requesting_account_id instead of trying to retrieve it.
             if not requesting_account_id:
-                # This should ideally be caught earlier, but handle defensively
-                logger.error("Could not determine requesting account ID for cancel operation.")
+                # This check might be redundant if handle_transactions validates it, but good for safety
+                logger.error("Missing requesting account ID for cancel operation.") # Use logger
                 error_elem = ET.SubElement(results_root, 'error', {'id': trans_id})
                 error_elem.text = "Internal error: Missing account context for cancel."
                 return
 
         except ValueError:
+            # Log error before returning
+            logger.warning(f"Invalid transaction ID format '{trans_id}' in cancel for account {requesting_account_id}") # Use logger
             error_elem = ET.SubElement(results_root, 'error', {'id': trans_id})
             error_elem.text = "Invalid transaction ID format"
             return
@@ -277,6 +288,7 @@ class XMLHandler:
                 order = self.database.get_order(order_id)
                 if not order:
                     # Should not happen if cancel succeeded, but handle defensively
+                    logger.error(f"Failed to retrieve order status after successful cancellation for order {order_id}") # Use logger
                     error_elem = ET.SubElement(results_root, 'error', {'id': trans_id})
                     error_elem.text = "Failed to retrieve order status after cancellation"
                     return
@@ -301,23 +313,24 @@ class XMLHandler:
                     # Ensure non-negative
                     canceled_shares_amount = max(0, canceled_shares_amount)
                     canceled_time_int = int(order.canceled_at.timestamp())
-                    ET.SubElement(canceled_element, 'canceled', {
+                    ET.SubElement(canceled_element, 'canceled', { # Use canceled_element
                         'shares': str(canceled_shares_amount),
                         'time': str(canceled_time_int)
                     })
                 else:
                      # This case indicates a potential issue if cancel succeeded but canceled_at is not set
-                     self.logger.error(f"Order {order_id} cancel succeeded but canceled_at is None.")
+                     logger.error(f"Order {order_id} cancel succeeded but canceled_at is None.") # Use logger
                      error_elem = ET.SubElement(results_root, 'error', {'id': trans_id})
                      error_elem.text = "Internal error: Order cancel status inconsistent"
 
             else:
-                # Error response from cancel_order
+                # Log the error from cancel_order
+                logger.warning(f"Cancel order {order_id} failed for account {requesting_account_id}: {error_msg}") # Use logger
                 error_elem = ET.SubElement(results_root, 'error', {'id': trans_id})
                 error_elem.text = error_msg
 
         except Exception as e:
-            self.logger.exception(f"Error processing cancel request for {trans_id}: {str(e)}")
+            logger.exception(f"Error processing cancel request for {trans_id}: {str(e)}") # Use logger
             error_elem = ET.SubElement(results_root, 'error', {'id': trans_id})
             error_elem.text = f"Internal server error processing cancel request: {str(e)}"
 
