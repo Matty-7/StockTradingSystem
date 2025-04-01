@@ -71,29 +71,6 @@ class Order(Base):
     def __repr__(self):
         return f"<Order(id={self.id}, account_id='{self.account_id}', symbol='{self.symbol_name}', amount={self.amount}, limit_price={self.limit_price})>"
 
-    def get_status(self):
-        """
-        Get order status for XML response
-
-        Returns:
-            list: XML elements representing order status
-        """
-        result = []
-
-        # Add open status if open
-        if self.open_shares != 0 and self.canceled_at is None:
-            result.append(f'<open shares="{abs(self.open_shares)}"/>')
-
-        # Add canceled status if canceled
-        if self.canceled_at is not None:
-            result.append(f'<canceled shares="{abs(self.amount) - sum(e[0] for e in self.executions)}" time="{int(self.canceled_at.timestamp())}"/>')
-
-        # Add execution statuses
-        for execution in self.executions:
-            result.append(f'<executed shares="{execution.shares}" price="{execution.price}" time="{int(execution.execution_time.timestamp())}"/>')
-
-        return result
-
 class Execution(Base):
     __tablename__ = 'executions'
 

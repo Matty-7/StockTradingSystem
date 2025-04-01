@@ -50,7 +50,8 @@ class MatchingEngine:
         else:
             opposite_orders.sort(key=lambda x: (-float(x.limit_price), x.created_at))
         session.add(new_order)
-        remaining_shares = abs(new_order.amount)
+        # Use open_shares as it reflects the current state
+        remaining_shares = abs(new_order.open_shares)
 
         for opposite_order in opposite_orders:
             # Check if we still have shares to match
@@ -68,7 +69,7 @@ class MatchingEngine:
                 continue
 
             # Calculate how many shares can be executed in this match
-            opposite_remaining = opposite_order.open_shares
+            opposite_remaining = abs(opposite_order.open_shares) # Use absolute value
             executable_shares = min(remaining_shares, opposite_remaining)
 
             if executable_shares <= 0:
@@ -112,9 +113,7 @@ class MatchingEngine:
             # Update seller's balance (add money)
             self.database.update_account_balance(seller_id, total_value, session)
 
-            # Update the order objects
-            new_order.open_shares -= executable_shares
-            opposite_order.open_shares -= executable_shares
+            # Note: execute_order_part already updates open_shares for both orders
 
             logger.info(f"Executed {executable_shares} shares at {execution_price}: " +
                         f"Order {new_order.id} has {new_order.open_shares} open shares, " +
@@ -128,14 +127,14 @@ class MatchingEngine:
 
             # If the opposite order is fully executed, update its status in the order book
             if opposite_order.open_shares == 0:
-                self.database.remove_order(opposite_order.id)
+                # No explicit removal needed, query filters handle it
                 logger.info(f"Removed fully executed order {opposite_order.id} from order book")
 
         session.add(new_order)
         # If new order still has shares to match, add it to the order book
-        if new_order.open_shares > 0:
-            self.database.add_order(new_order)
-            logger.info(f"Added order {new_order.id} with {new_order.open_shares} remaining shares to order book")
+        if new_order.open_shares != 0: # Check against 0, works for both buy/sell
+            # No explicit add needed, session commit handles persistence
+            logger.info(f"Order {new_order.id} with {new_order.open_shares} remaining shares remains open")
 
         return executed_orders
 

@@ -224,41 +224,79 @@ def test_all_transaction_operation_order_sell():
 
   return str(len(xml_str)) + "\n" + xml_str
 
-def test_all_transaction_operation_cancel():
-  #write cancel here to cancel <order sym="GOOG" amount="100" limit="0">
-  # Assuming this order has transaction ID 9 (second order from account 3)
+def test_all_transaction_operation_cancel(account_id, transaction_id):
+  #write cancel here to cancel a specific transaction ID
   xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n'
-  xml_str += '<transactions id="3">\n'
-  xml_str += generate_indent()  + '<cancel id="9"/>\n'  # Cancel transaction 9
+  xml_str += f'<transactions id="{account_id}">\n'
+  xml_str += generate_indent()  + f'<cancel id="{transaction_id}"/>\n'
   xml_str += '</transactions>\n'
   return str(len(xml_str)) + "\n" + xml_str
 
-def test_all_transaction_operation_query():
-  #write query here to see the result of the orders.
-  # Let's query transaction ID 8 (the first buy order from account 3)
+def test_all_transaction_operation_query(account_id, transaction_id):
+  #write query here to see the result of a specific transaction ID.
   xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n'
-  xml_str += '<transactions id="3">\n'
-  xml_str += generate_indent()  + '<query id="8"/>\n'  # Query transaction 8
+  xml_str += f'<transactions id="{account_id}">\n'
+  xml_str += generate_indent()  + f'<query id="{transaction_id}"/>\n'
   xml_str += '</transactions>\n'
   return str(len(xml_str)) + "\n" + xml_str
 
 def test_all_transaction_operations(client_socket):
+  # Setup
   send_xml_to_server(test_all_transaction_operations_setup(), client_socket)
-  send_xml_to_server(test_all_transaction_operation_order_buy(), client_socket)
+
+  # Send buy orders and get their IDs
+  buy_response_xml = send_xml_to_server(test_all_transaction_operation_order_buy(), client_socket)
+  buy_ids = []
+  try:
+    root = ET.fromstring(buy_response_xml)
+    for opened in root.findall('opened'):
+      buy_ids.append(opened.get('id'))
+  except ET.ParseError as e:
+    print(f"Error parsing buy response: {e}")
+    print(f"Response was: {buy_response_xml}")
+    return # Cannot proceed without IDs
+
+  if len(buy_ids) < 2:
+      print(f"Error: Expected at least 2 opened orders for buy, got {len(buy_ids)}")
+      print(f"Buy IDs received: {buy_ids}")
+      # Decide how to handle this - maybe still try to send sell/cancel/query if possible?
+      # For now, let's return if we don't have enough IDs for the planned test.
+      return
+
+  # Send sell orders (we don't necessarily need their IDs for this specific test flow)
   send_xml_to_server(test_all_transaction_operation_order_sell(), client_socket)
-  send_xml_to_server(test_all_transaction_operation_cancel(), client_socket)
-  send_xml_to_server(test_all_transaction_operation_query(), client_socket)
+
+  # Cancel the second buy order (assuming IDs are sequential as received)
+  if len(buy_ids) >= 2:
+      cancel_id = buy_ids[1] # ID of the <order sym="GOOG" amount="100" limit="0">
+      account_id_cancel = "3" # Account that made the buy order
+      send_xml_to_server(test_all_transaction_operation_cancel(account_id_cancel, cancel_id), client_socket)
+  else:
+      print("Skipping cancel test: Not enough buy order IDs received.")
+
+
+  # Query the first buy order
+  if len(buy_ids) >= 1:
+      query_id = buy_ids[0] # ID of the <order sym="GOOG" amount="100" limit="123">
+      account_id_query = "3" # Account that made the buy order
+      send_xml_to_server(test_all_transaction_operation_query(account_id_query, query_id), client_socket)
+  else:
+      print("Skipping query test: No buy order IDs received.")
+
 
 def send_xml_to_server(xml_request, client_socket):
   """
   Sends the XML string to the Server listening on PORT 12345
+  Returns the server's response string.
   """
   print("--------------------------------------------------")
   client_socket.sendall(xml_request.encode('utf-8'))
   print(f"Sent request:\n{xml_request}")
-  response = client_socket.recv(4096)
-  print(f"Server response:\n{response.decode('utf-8')}")
+  response_bytes = client_socket.recv(4096)
+  response_str = response_bytes.decode('utf-8')
+  print(f"Server response:\n{response_str}")
   print("--------------------------------------------------\n")
+  return response_str # Return the response
 
 def basic_order_transaction_test():
   """
@@ -309,10 +347,11 @@ def main():
 
         #Send XML to create an accoutn and a symbol. Should return an created tag for both.
         #Expected : <results><created id="123456"/><created sym="SPY" id="123456"/></results>
-        send_xml_to_server(basic_creation_test(), client_socket)
+        # This tests creating an existing account/symbol - should produce errors
+        send_xml_to_server(basic_creation_test(), client_socket) # Expect errors here
 
         #Send XML to test empty create
-        # should respond with results and an opened
+        # should respond with results
         send_xml_to_server(test_empty_create(), client_socket)
 
         #Send XML to make an symbol with an account that does not exist
@@ -330,11 +369,22 @@ def main():
         # Sends a series of XML to test order matching mechanism
         test_transaction_matching_all(client_socket)
 
+        # Sends a series of XML to test query and cancel
+        test_all_transaction_operations(client_socket) # Now runs the refactored test
+
+    except ConnectionRefusedError:
+        print(f"Error: Connection refused. Is the server running at {server_address}?")
+    except socket.timeout:
+        print("Error: Socket connection timed out.")
+    except ET.ParseError as e:
+        print(f"XML Parsing Error during testing: {e}")
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"An unexpected error occurred: {e}")
+
 
     finally:
         # Close the connection
+        print("Closing client socket.")
         client_socket.close()
 
 if __name__ == "__main__":
