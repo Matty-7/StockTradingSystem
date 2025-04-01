@@ -226,16 +226,26 @@ def test_all_transaction_operation_order_sell():
 
 def test_all_transaction_operation_cancel():
   #write cancel here to cancel <order sym="GOOG" amount="100" limit="0">
-  return ""
+  # Assuming this order has transaction ID 9 (second order from account 3)
+  xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n'
+  xml_str += '<transactions id="3">\n'
+  xml_str += generate_indent()  + '<cancel id="9"/>\n'  # Cancel transaction 9
+  xml_str += '</transactions>\n'
+  return str(len(xml_str)) + "\n" + xml_str
 
 def test_all_transaction_operation_query():
   #write query here to see the result of the orders.
-  return ""
+  # Let's query transaction ID 8 (the first buy order from account 3)
+  xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n'
+  xml_str += '<transactions id="3">\n'
+  xml_str += generate_indent()  + '<query id="8"/>\n'  # Query transaction 8
+  xml_str += '</transactions>\n'
+  return str(len(xml_str)) + "\n" + xml_str
 
 def test_all_transaction_operations(client_socket):
   send_xml_to_server(test_all_transaction_operations_setup(), client_socket)
-  send_xml_to_server(test_all_transaction_operation_orders_buy(), client_socket)
-  send_xml_to_server(test_all_transaction_operation_orders_sell(), client_socket)
+  send_xml_to_server(test_all_transaction_operation_order_buy(), client_socket)
+  send_xml_to_server(test_all_transaction_operation_order_sell(), client_socket)
   send_xml_to_server(test_all_transaction_operation_cancel(), client_socket)
   send_xml_to_server(test_all_transaction_operation_query(), client_socket)
 
