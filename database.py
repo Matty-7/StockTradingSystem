@@ -82,7 +82,7 @@ class Database:
                 account_id=account_id, symbol_name=symbol_name).first()
             return position.amount if position else 0
 
-    def update_position(self, symbol_name, account_id, amount, session=None):
+    def update_position(self, account_id, symbol_name, amount, session=None):
         """更新股票仓位"""
         close_session = False
         if session is None:

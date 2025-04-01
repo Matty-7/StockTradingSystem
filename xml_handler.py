@@ -133,6 +133,8 @@ class XMLHandler:
 
             elif child.tag == 'query':
                 trans_id = child.attrib.get('id')
+                print("7\n")
+                print(trans_id)
                 order = self.database.get_order(int(trans_id))
 
                 if order:
