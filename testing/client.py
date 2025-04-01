@@ -279,12 +279,6 @@ def test_all_transaction_operations(client_socket):
     print(f"Response was: {buy_response_xml}")
     return # Cannot proceed without IDs
 
-  if len(buy_ids) < 2:
-      print(f"Warning: Expected at least 2 opened orders for buy, got {len(buy_ids)}")
-      print(f"Buy IDs received: {buy_ids}")
-      # Continue with testing even if we don't have all expected orders
-      # This allows testing with at least one order
-
   # Send sell orders (we don't necessarily need their IDs for this specific test flow)
   send_xml_to_server(test_all_transaction_operation_order_sell(), client_socket)
 
