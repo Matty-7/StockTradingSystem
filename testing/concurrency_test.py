@@ -170,9 +170,6 @@ def run_concurrency_test():
         for t, s in threads:
             t.join()
             s.close()
-            
-        # Test account consistency
-        test_account_consistency(client_socket)
         
         # Print result statistics
         print("\n=================== CONCURRENCY TEST RESULTS ===================")

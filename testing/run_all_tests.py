@@ -30,6 +30,12 @@ def run_all_tests():
         print("Starting comprehensive tests...")
         f.write("Starting comprehensive tests...\n")
         
+        # Set database environment variable for server
+        # Use the PostgreSQL Docker container configuration
+        os.environ['DATABASE_URL'] = 'postgresql://exchange:exchange-password@localhost/exchange'
+        print(f"Using database URL: {os.environ['DATABASE_URL']}")
+        f.write(f"Using database URL: {os.environ['DATABASE_URL']}\n")
+        
         # 1. Start server (using absolute path)
         server_path = os.path.join(root_dir, "server.py")
         print(f"Starting server: {server_path}")
@@ -38,7 +44,8 @@ def run_all_tests():
         server_process = subprocess.Popen(["python3", server_path], 
                                          stdout=subprocess.PIPE, 
                                          stderr=subprocess.STDOUT,
-                                         text=True)
+                                         text=True,
+                                         env=os.environ)  # Pass environment variables
         time.sleep(2)  # Wait for server to start
         
         try:
@@ -46,7 +53,7 @@ def run_all_tests():
             print("\n=== Running Functional Tests ===")
             f.write("\n=== Running Functional Tests ===\n")
             
-            client_path = os.path.join(current_dir, "client.py")
+            client_path = os.path.join(current_dir, "client_test.py")
             if os.path.exists(client_path):
                 result = subprocess.run(["python3", client_path], 
                                       capture_output=True, 
