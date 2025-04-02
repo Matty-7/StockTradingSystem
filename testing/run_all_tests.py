@@ -6,7 +6,7 @@ import io
 import sys
 from datetime import datetime
 
-def run_all_tests():
+def run_all_tests(skip_server=False):
     """Run all functional and performance tests"""
     # Get timestamp for this test run
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -36,17 +36,24 @@ def run_all_tests():
         print(f"Using database URL: {os.environ['DATABASE_URL']}")
         f.write(f"Using database URL: {os.environ['DATABASE_URL']}\n")
         
-        # 1. Start server (using absolute path)
-        server_path = os.path.join(root_dir, "server.py")
-        print(f"Starting server: {server_path}")
-        f.write(f"Starting server: {server_path}\n")
+        server_process = None
         
-        server_process = subprocess.Popen(["python3", server_path], 
-                                         stdout=subprocess.PIPE, 
-                                         stderr=subprocess.STDOUT,
-                                         text=True,
-                                         env=os.environ)  # Pass environment variables
-        time.sleep(2)  # Wait for server to start
+        # Only start server if not skipping
+        if not skip_server:
+            # 1. Start server (using absolute path)
+            server_path = os.path.join(root_dir, "server.py")
+            print(f"Starting server: {server_path}")
+            f.write(f"Starting server: {server_path}\n")
+            
+            server_process = subprocess.Popen(["python3", server_path], 
+                                             stdout=subprocess.PIPE, 
+                                             stderr=subprocess.STDOUT,
+                                             text=True,
+                                             env=os.environ)  # Pass environment variables
+            time.sleep(2)  # Wait for server to start
+        else:
+            print("Skipping server startup - using existing server")
+            f.write("Skipping server startup - using existing server\n")
         
         try:
             # 2. Run functional tests (fix file name and path)
@@ -151,19 +158,23 @@ def run_all_tests():
             f.write(error_msg + "\n")
             
         finally:
-            # Collect server output
-            server_output, _ = server_process.communicate()
-            if server_output:
-                print("Server output:")
-                print(server_output)
-                f.write("\n=== Server Output ===\n")
-                f.write(server_output)
-            
-            # Shut down server
-            print("Shutting down server...")
-            f.write("\nShutting down server...\n")
-            server_process.terminate()
-            server_process.wait(timeout=5)
+            # Only try to get server output and shut down if we started it
+            if server_process:
+                # Collect server output
+                server_output, _ = server_process.communicate()
+                if server_output:
+                    print("Server output:")
+                    print(server_output)
+                    f.write("\n=== Server Output ===\n")
+                    f.write(server_output)
+                
+                # Shut down server
+                print("Shutting down server...")
+                f.write("\nShutting down server...\n")
+                server_process.terminate()
+                server_process.wait(timeout=5)
+            else:
+                f.write("\nUsing external server - no shutdown required\n")
         
         print("\nAll tests completed!")
         f.write("\nAll tests completed!\n")
@@ -174,9 +185,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run all exchange engine tests")
     parser.add_argument("--cores", type=int, default=None, 
                        help="Specify number of cores to use for testing")
+    parser.add_argument("--skip-server", action="store_true",
+                       help="Skip starting the server (use if server is already running)")
     args = parser.parse_args()
     
     if args.cores:
         os.environ["CPU_CORES"] = str(args.cores)
     
-    run_all_tests()
+    run_all_tests(skip_server=args.skip_server)
