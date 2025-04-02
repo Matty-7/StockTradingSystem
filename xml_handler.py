@@ -175,10 +175,10 @@ class XMLHandler:
                 try:
                     order_id = int(trans_id)
                     logger.info(f"Querying status for order ID: {order_id} (Account: {account_id})")
-                    
+
                     status_element = None
                     error_element = None
-                    
+
                     # Use a session scope for all database operations
                     with self.database.session_scope() as session:
                         # First, check if the order exists and belongs to the user
@@ -204,10 +204,10 @@ class XMLHandler:
                                 order_open_shares = order_check.open_shares
                                 order_is_canceled = order_check.canceled_at is not None
                                 order_canceled_at = order_check.canceled_at.isoformat() if order_check.canceled_at else None
-                                
+
                                 # Get all executions for this order
                                 executions = session.query(Execution).filter_by(order_id=order_id).all()
-                                
+
                                 # Capture execution data within the session
                                 execution_data = []
                                 total_executed_shares = 0
@@ -220,48 +220,48 @@ class XMLHandler:
                                     }
                                     execution_data.append(exec_info)
                                     total_executed_shares += execution.shares
-                                
+
                                 # Calculate avg price if needed
                                 avg_executed_price = None
                                 if total_executed_shares > 0:
                                     avg_executed_price = sum(e["shares"] * e["price"] for e in execution_data) / total_executed_shares
-                                
+
                                 # Create the status element
                                 status_element = ET.Element('status', {'id': trans_id})
-                                
+
                                 # Add open status if applicable
                                 if order_open_shares != 0 and not order_is_canceled:
                                     open_elem = ET.Element('open', {'shares': str(abs(order_open_shares))})
                                     status_element.append(open_elem)
-                                
+
                                 # Add executions
                                 for execution in execution_data:
                                     exec_elem = ET.Element('executed', {
-                                        'shares': str(execution["shares"]), 
-                                        'price': str(execution["price"]), 
+                                        'shares': str(execution["shares"]),
+                                        'price': str(execution["price"]),
                                         'time': str(execution["timestamp"])
                                     })
                                     status_element.append(exec_elem)
-                                
+
                                 # Add canceled status if applicable
                                 if order_is_canceled and order_canceled_at:
                                     # Calculate canceled shares
                                     canceled_shares = abs(order_amount) - total_executed_shares
                                     canceled_shares = max(0, canceled_shares)  # Ensure non-negative
-                                    
+
                                     cancel_time = int(datetime.datetime.fromisoformat(order_canceled_at).timestamp())
                                     canceled_elem = ET.Element('canceled', {
                                         'shares': str(canceled_shares),
                                         'time': str(cancel_time)
                                     })
                                     status_element.append(canceled_elem)
-                                
+
                                 logger.info(f"Successfully retrieved status for order {order_id}")
-                                
+
                             except Exception as e:
                                 logger.exception(f"Error processing order details for {order_id}: {str(e)}")
                                 error_element = ET.Element('error', {'id': trans_id, 'error': f"Error processing order details: {str(e)}"})
-                    
+
                     # After session is closed, add either the status or error element
                     if error_element is not None:
                         results_root.append(error_element)
@@ -270,7 +270,7 @@ class XMLHandler:
                     else:
                         # This should not happen, but just in case
                         results_root.append(ET.Element('error', {'id': trans_id, 'error': "Unknown error occurred"}))
-                        
+
                 except ValueError:
                     logger.warning(f"Invalid transaction ID format '{trans_id}' in query for account {account_id}")
                     results_root.append(ET.Element('error', {'id': trans_id, 'error': "Invalid transaction ID format"}))
@@ -336,7 +336,7 @@ class XMLHandler:
                     error_elem = ET.SubElement(results_root, 'error', {'id': trans_id})
                     error_elem.text = "Order not found"
                     return
-                
+
                 # === Permission Check ===
                 if order.account_id != requesting_account_id:
                     logger.warning(f"Permission denied: Account {requesting_account_id} tried to cancel order {order_id} owned by {order.account_id}")
@@ -399,12 +399,12 @@ class XMLHandler:
                 # Update order status
                 order.open_shares = 0
                 order.canceled_at = cancel_time
-                
+
                 # Success - now fetch executions and create response in the same session
                 executions = session.query(Execution).filter_by(order_id=order_id).all()
-                
+
                 canceled_element = ET.SubElement(results_root, 'canceled', {'id': trans_id})
-                
+
                 # Add executions
                 total_executed_shares = 0
                 for execution in executions:
@@ -415,16 +415,16 @@ class XMLHandler:
                         'time': str(exec_time)
                     })
                     total_executed_shares += execution.shares
-                
+
                 # Add canceled part
                 canceled_shares = abs(order.amount) - total_executed_shares
                 canceled_shares = max(0, canceled_shares)  # Ensure non-negative
-                
+
                 ET.SubElement(canceled_element, 'canceled', {
                     'shares': str(canceled_shares),
                     'time': str(int(cancel_time.timestamp()))
                 })
-                
+
                 logger.info(f"Successfully canceled order {order_id} for account {requesting_account_id}")
 
         except Exception as e:

@@ -1,0 +1,7 @@
+Danger Log:
+
+1. We do not limit the size and the number of request of the xml. What if an attacker DOS our server by having numerous request in a single xml (e.g. for create a lot of accounts, for transaction, create a lot of queeries/cancel/orders)?
+
+2. Similarly, what if an attacker similarly connects but does not send anything? Or what if a client simply forgets to discconnect?
+
+3. Currently, there are no credentials validation, meaning that you client can access the stocks and balance of another account.
