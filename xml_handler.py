@@ -6,21 +6,13 @@ import re
 from model import Account, Position, Order, Execution
 import threading
 
-# Setup logger for this module
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO) # Or DEBUG for more verbosity
-# Add handler if not configured globally (e.g., in server.py)
-# handler = logging.StreamHandler()
-# formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-# handler.setFormatter(formatter)
-# logger.addHandler(handler)
+logger.setLevel(logging.INFO)
 
 class XMLHandler:
     def __init__(self, database, matching_engine):
         self.database = database
         self.matching_engine = matching_engine
-        # Use the module-level logger
-        # self.logger = logging.getLogger("XMLHandler")
 
     def process_request(self, xml_data):
         """Process XML request and return XML response"""

@@ -44,8 +44,6 @@ def set_core_count(cores):
     """Set the number of cores for the server to use (via environment variable)"""
     print(f"Setting server to use {cores} cores...")
     os.environ["CPU_CORES"] = str(cores)
-    # Restart server to apply new core setting
-    # Note: In a real environment, this might need a more complex implementation
 
 def send_batch_requests(request_count):
     """Send a batch of requests to test system performance"""
@@ -168,7 +166,6 @@ def send_xml_to_server(xml_request, client_socket, timeout=2):
         return "<results><error>Request timed out</error></results>"
 
 if __name__ == "__main__":
-    # Only test available cores on the system
     available_cores = os.cpu_count()
     if available_cores >= 16:
         core_counts = [1, 2, 4, 8, 16]

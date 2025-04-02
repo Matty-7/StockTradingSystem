@@ -1,12 +1,9 @@
 import threading
 import datetime
 import logging
-# Import Account and Position models (assuming they are in database.py)
 from database import Account, Position, Order
 
-# Setup logger for this module
 logger = logging.getLogger(__name__)
-# logger.setLevel(logging.DEBUG) # Set level if needed
 
 class MatchingEngine:
     def __init__(self, database):

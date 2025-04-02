@@ -30,7 +30,7 @@ def setup_test_environment(client_socket):
     xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n'
     xml_str += '<create>\n'
     
-    # add more accounts with higher balances
+    # add more accounts with high balances
     for i in range(1, TEST_ACCOUNTS + 1):
         xml_str += generate_indent() + f'<account id="concurrent{i}" balance="500000"/>\n'
     
@@ -80,7 +80,7 @@ def concurrent_worker(thread_id, client_socket):
         if thread_id % TEST_ACCOUNTS < 3:  # First 3 threads perform safer operations
             # First create some guaranteed successful orders
             account_id = f"concurrent{(thread_id % TEST_ACCOUNTS) + 1}"
-            # Small buy order - guaranteed to succeed
+            # Small buy order
             small_amount = random.randint(1, 5)
             small_price = random.uniform(10, 30) 
             response = execute_buy(account_id, small_amount, small_price, client_socket)
@@ -103,12 +103,12 @@ def concurrent_worker(thread_id, client_socket):
                         local_orders[account_id].append(order_id)
         
         for op in range(OPERATIONS_PER_THREAD - 1 if thread_id % TEST_ACCOUNTS < 3 else OPERATIONS_PER_THREAD):  # Adjust for initial guaranteed operation
-            # dynamically adjust operation type selection probability based on previous operations
+            
             op_weights = {
                 'buy': 0.5,     # higher probability to buy, create orders
                 'sell': 0.2,    # moderate probability to sell
                 'query': 0.2,   # moderate probability to query  
-                'cancel': 0.1   # lower probability to cancel (less likely to succeed)
+                'cancel': 0.1   # lower probability to cancel
             }
             
             # if there are existing orders, increase the weight of query and cancel
@@ -116,7 +116,7 @@ def concurrent_worker(thread_id, client_socket):
                 if any(len(orders) > 0 for orders in order_tracking.values()):
                     op_weights['buy'] = 0.3
                     op_weights['sell'] = 0.2
-                    op_weights['query'] = 0.4  # Much higher query probability for success
+                    op_weights['query'] = 0.4
                     op_weights['cancel'] = 0.1
             
             # select operation type based on weights
@@ -198,7 +198,7 @@ def concurrent_worker(thread_id, client_socket):
                 
                 # if there is no known ID, use random ID with smaller range
                 if not order_id:
-                    order_id = random.randint(1, 100)  # Smaller range
+                    order_id = random.randint(1, 100)
                     
                 response = execute_cancel(account_id, order_id, client_socket)
                 
@@ -309,7 +309,6 @@ def run_concurrency_test():
         total_ops = NUM_THREADS * OPERATIONS_PER_THREAD
         success_rate = (success_count / total_ops) * 100 if total_ops > 0 else 0
         
-        # Print result statistics
         print("\n=================== CONCURRENCY TEST RESULTS ===================")
         print(f"Total operations: {total_ops}")
         print(f"Successful operations: {success_count} ({success_rate:.2f}%)")

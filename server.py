@@ -5,15 +5,13 @@ from database import Database
 from xml_handler import XMLHandler
 from matching_engine import MatchingEngine
 import os
-import logging # Import logging
+import logging
 
-# Configure basic logging
-logging.basicConfig(level=logging.INFO, # Change to DEBUG for more verbose output
+logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    handlers=[logging.StreamHandler()]) # Log to console
+                    handlers=[logging.StreamHandler()])
 logger = logging.getLogger(__name__)
 
-# Initialize global instances
 db_url = os.environ.get('DATABASE_URL', 'postgresql://username:password@localhost/exchange')
 logger.info(f"Database URL: {db_url}")
 database = Database(db_url)
