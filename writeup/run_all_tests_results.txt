@@ -1,4 +1,4 @@
-Test Run: 20250402_111910
+Test Run: 20250402_112810
 ================================================================================
 
 Starting comprehensive tests...
@@ -127,7 +127,7 @@ Sent request:
 </transactions>
 
 Server response:
-<results><opened sym="AMZN" amount="-100" limit="130" id="10953" /><opened sym="AMZN" amount="-500" limit="128" id="10954" /><opened sym="AMZN" amount="-200" limit="140" id="10955" /></results>
+<results><opened sym="AMZN" amount="-100" limit="130" id="12025" /><opened sym="AMZN" amount="-500" limit="128" id="12026" /><opened sym="AMZN" amount="-200" limit="140" id="12027" /></results>
 --------------------------------------------------
 
 --------------------------------------------------
@@ -139,7 +139,7 @@ Sent request:
 </transactions>
 
 Server response:
-<results><opened sym="AMZN" amount="-400" limit="124" id="10956" /></results>
+<results><opened sym="AMZN" amount="-400" limit="124" id="12028" /></results>
 --------------------------------------------------
 
 --------------------------------------------------
@@ -208,7 +208,7 @@ Sent request:
 </transactions>
 
 Server response:
-<results><error sym="GOOG" amount="100" limit="123" error="Insufficient funds" /><opened sym="GOOG" amount="100" limit="0" id="10957" /></results>
+<results><error sym="GOOG" amount="100" limit="123" error="Insufficient funds" /><opened sym="GOOG" amount="100" limit="0" id="12029" /></results>
 --------------------------------------------------
 
 --------------------------------------------------
@@ -220,7 +220,7 @@ Sent request:
 </transactions>
 
 Server response:
-<results><opened sym="GOOG" amount="-50" limit="123" id="10958" /></results>
+<results><opened sym="GOOG" amount="-50" limit="123" id="12030" /></results>
 --------------------------------------------------
 
 --------------------------------------------------
@@ -228,11 +228,11 @@ Sent request:
 100
 <?xml version="1.0" encoding="UTF-8"?>
 <transactions id="3">
-  <cancel id="10957"/>
+  <cancel id="12029"/>
 </transactions>
 
 Server response:
-<results><canceled id="10957"><canceled shares="100.0" time="1743607150" /></canceled></results>
+<results><canceled id="12029"><canceled shares="100.0" time="1743607690" /></canceled></results>
 --------------------------------------------------
 
 --------------------------------------------------
@@ -240,11 +240,11 @@ Sent request:
 99
 <?xml version="1.0" encoding="UTF-8"?>
 <transactions id="3">
-  <query id="10957"/>
+  <query id="12029"/>
 </transactions>
 
 Server response:
-<results><status id="10957"><canceled shares="100.0" time="1743607150" /></status></results>
+<results><status id="12029"><canceled shares="100.0" time="1743607690" /></status></results>
 --------------------------------------------------
 
 Closing client socket.
@@ -303,23 +303,25 @@ Connected to server, starting concurrency test...
 Setting up test environment...
 --------------------------------------------------
 Sent request:
-470
+563
 <?xml version="1.0" encoding="UTF-8"?>
 <create>
-  <account id="concurrent1" balance="100000"/>
-  <account id="concurrent2" balance="100000"/>
-  <account id="concurrent3" balance="100000"/>
-  <account id="concurrent4" balance="100000"/>
-  <account id="concurrent5" balance="100000"/>
+  <account id="concurrent1" balance="500000"/>
+  <account id="concurrent2" balance="500000"/>
+  <account id="concurrent3" balance="500000"/>
+  <account id="concurrent4" balance="500000"/>
+  <account id="concurrent5" balance="500000"/>
   <symbol sym="TESTSTOCK">
-    <account id="concurrent1">50000</account>
-    <account id="concurrent2">30000</account>
-    <account id="concurrent3">20000</account>
+    <account id="concurrent1">100000</account>
+    <account id="concurrent2">80000</account>
+    <account id="concurrent3">60000</account>
+    <account id="concurrent4">40000</account>
+    <account id="concurrent5">20000</account>
   </symbol>
 </create>
 
 Server response:
-<results><error id="concurrent1">Account already exists</error><error id="concurrent2">Account already exists</error><error id="concurrent3">Account already exists</error><error id="concurrent4">Account already exists</error><error id="concurrent5">Account already exists</error><created sym="TESTSTOCK" id="concurrent1" /><created sym="TESTSTOCK" id="concurrent2" /><created sym="TESTSTOCK" id="concurrent3" /></results>
+<results><error id="concurrent1">Account already exists</error><error id="concurrent2">Account already exists</error><error id="concurrent3">Account already exists</error><error id="concurrent4">Account already exists</error><error id="concurrent5">Account already exists</error><created sym="TESTSTOCK" id="concurrent1" /><created sym="TESTSTOCK" id="concurrent2" /><created sym="TESTSTOCK" id="concurrent3" /><created sym="TESTSTOCK" id="concurrent4" /><created sym="TESTSTOCK" id="concurrent5" /></results>
 --------------------------------------------------
 
 Test environment setup complete
@@ -328,7 +330,7 @@ Sent request:
 139
 <?xml version="1.0" encoding="UTF-8"?>
 <transactions id="concurrent1">
-  <order sym="TESTSTOCK" amount="2" limit="40.40"/>
+  <order sym="TESTSTOCK" amount="1" limit="17.19"/>
 </transactions>
 
 --------------------------------------------------
@@ -336,63 +338,15 @@ Sent request:
 139
 <?xml version="1.0" encoding="UTF-8"?>
 <transactions id="concurrent2">
-  <order sym="TESTSTOCK" amount="2" limit="63.99"/>
-</transactions>
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent2">
-  <order sym="TESTSTOCK" amount="-1" limit="20.59"/>
+  <order sym="TESTSTOCK" amount="4" limit="22.75"/>
 </transactions>
 
 --------------------------------------------------
 Sent request:
 139
 <?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent5">
-  <order sym="TESTSTOCK" amount="3" limit="59.42"/>
-</transactions>
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent2">
-  <order sym="TESTSTOCK" amount="18" limit="63.73"/>
-</transactions>
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent2">
-  <order sym="TESTSTOCK" amount="10" limit="31.85"/>
-</transactions>
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent4">
-  <order sym="TESTSTOCK" amount="18" limit="23.87"/>
-</transactions>
-
---------------------------------------------------
-Sent request:
-107
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent4">
-  <cancel id="44"/>
-</transactions>
-
---------------------------------------------------
-Sent request:
-108
-<?xml version="1.0" encoding="UTF-8"?>
 <transactions id="concurrent3">
-  <cancel id="346"/>
+  <order sym="TESTSTOCK" amount="3" limit="26.14"/>
 </transactions>
 
 --------------------------------------------------
@@ -400,83 +354,83 @@ Sent request:
 140
 <?xml version="1.0" encoding="UTF-8"?>
 <transactions id="concurrent5">
-  <order sym="TESTSTOCK" amount="10" limit="54.64"/>
+  <order sym="TESTSTOCK" amount="-1" limit="48.91"/>
 </transactions>
-
-Server response:
-<results><opened sym="TESTSTOCK" amount="-1" limit="20.59" id="10959" /></results>
---------------------------------------------------
 
 --------------------------------------------------
 Sent request:
-140
+107
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent5">
+  <cancel id="51"/>
+</transactions>
+
+--------------------------------------------------
+Sent request:
+139
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent1">
+  <order sym="TESTSTOCK" amount="3" limit="21.35"/>
+</transactions>
+
+--------------------------------------------------
+Sent request:
+139
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent2">
+  <order sym="TESTSTOCK" amount="4" limit="29.13"/>
+</transactions>
+
+--------------------------------------------------
+Sent request:
+139
 <?xml version="1.0" encoding="UTF-8"?>
 <transactions id="concurrent3">
-  <order sym="TESTSTOCK" amount="-1" limit="36.05"/>
+  <order sym="TESTSTOCK" amount="5" limit="29.90"/>
 </transactions>
-
-Server response:
-<results><error sym="TESTSTOCK" amount="2" limit="40.40" error="Insufficient funds" /></results>
---------------------------------------------------
 
 --------------------------------------------------
 Sent request:
 140
 <?xml version="1.0" encoding="UTF-8"?>
 <transactions id="concurrent2">
-  <order sym="TESTSTOCK" amount="-1" limit="34.02"/>
+  <order sym="TESTSTOCK" amount="-1" limit="13.56"/>
 </transactions>
-
-Server response:
-<results><error id="346">Permission denied: Cannot cancel order belonging to another account</error></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent2">
-  <order sym="TESTSTOCK" amount="12" limit="54.51"/>
-</transactions>
-
-Server response:
-<results><error id="44">Order not found</error></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-109
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent2">
-  <query id="10959"/>
-</transactions>
-
-Server response:
-<results><status id="10959"><executed shares="1.0" price="43.25" time="1743607151" /></status></results>
---------------------------------------------------
 
 --------------------------------------------------
 Sent request:
 107
 <?xml version="1.0" encoding="UTF-8"?>
 <transactions id="concurrent4">
-  <query id="103"/>
+  <cancel id="59"/>
 </transactions>
 
 Server response:
-<results><error id="103" error="Permission denied: Order belongs to another account" /></results>
+<results><error id="51">Order not found</error></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+107
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent5">
+  <cancel id="67"/>
+</transactions>
+
+Server response:
+<results><error id="59">Permission denied: Cannot cancel order belonging to another account</error></results>
 --------------------------------------------------
 
 --------------------------------------------------
 Sent request:
 140
 <?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent3">
-  <order sym="TESTSTOCK" amount="12" limit="61.04"/>
+<transactions id="concurrent1">
+  <order sym="TESTSTOCK" amount="-2" limit="41.95"/>
 </transactions>
 
 Server response:
-<results><opened sym="TESTSTOCK" amount="2" limit="63.99" id="10960" /></results>
+<results><error id="67">Permission denied: Cannot cancel order belonging to another account</error></results>
 --------------------------------------------------
 
 --------------------------------------------------
@@ -484,59 +438,47 @@ Sent request:
 139
 <?xml version="1.0" encoding="UTF-8"?>
 <transactions id="concurrent3">
-  <order sym="TESTSTOCK" amount="6" limit="75.86"/>
+  <order sym="TESTSTOCK" amount="7" limit="34.27"/>
 </transactions>
 
 Server response:
-<results><opened sym="TESTSTOCK" amount="3" limit="59.42" id="10961" /></results>
+<results><opened sym="TESTSTOCK" amount="1" limit="17.19" id="12031" /></results>
 --------------------------------------------------
 
 --------------------------------------------------
 Sent request:
-108
+139
 <?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent3">
-  <cancel id="238"/>
+<transactions id="concurrent2">
+  <order sym="TESTSTOCK" amount="9" limit="31.06"/>
 </transactions>
 
 Server response:
-<results><error sym="TESTSTOCK" amount="18" limit="63.73" error="Insufficient funds" /></results>
+<results><opened sym="TESTSTOCK" amount="4" limit="22.75" id="12032" /></results>
 --------------------------------------------------
 
 --------------------------------------------------
 Sent request:
-107
+139
 <?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent4">
-  <query id="242"/>
+<transactions id="concurrent5">
+  <order sym="TESTSTOCK" amount="5" limit="46.49"/>
 </transactions>
 
 Server response:
-<results><error id="238">Order not found</error></results>
+<results><opened sym="TESTSTOCK" amount="3" limit="26.14" id="12033" /></results>
 --------------------------------------------------
 
 --------------------------------------------------
 Sent request:
-140
+109
 <?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent3">
-  <order sym="TESTSTOCK" amount="16" limit="29.20"/>
+<transactions id="concurrent2">
+  <query id="12032"/>
 </transactions>
 
 Server response:
-<results><error id="242" error="Permission denied: Order belongs to another account" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-108
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent1">
-  <cancel id="192"/>
-</transactions>
-
-Server response:
-<results><error id="192">Order not found</error></results>
+<results><status id="12032"><open shares="4.0" /></status></results>
 --------------------------------------------------
 
 --------------------------------------------------
@@ -544,119 +486,11 @@ Sent request:
 139
 <?xml version="1.0" encoding="UTF-8"?>
 <transactions id="concurrent3">
-  <order sym="TESTSTOCK" amount="7" limit="53.83"/>
+  <order sym="TESTSTOCK" amount="8" limit="24.49"/>
 </transactions>
 
 Server response:
-<results><opened sym="TESTSTOCK" amount="18" limit="23.87" id="10962" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-107
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent1">
-  <query id="115"/>
-</transactions>
-
-Server response:
-<results><error id="115" error="Permission denied: Order belongs to another account" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-109
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent5">
-  <query id="10961"/>
-</transactions>
-
-Server response:
-<results><status id="10961"><executed shares="1.0" price="50.0" time="1743607151" /><executed shares="1.0" price="50.0" time="1743607151" /><executed shares="1.0" price="50.0" time="1743607151" /></status></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-107
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent3">
-  <query id="449"/>
-</transactions>
-
-Server response:
-<results><error id="449" error="Permission denied: Order belongs to another account" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent3">
-  <order sym="TESTSTOCK" amount="19" limit="23.26"/>
-</transactions>
-
-Server response:
-<results><opened sym="TESTSTOCK" amount="10" limit="31.85" id="10963" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-108
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent5">
-  <cancel id="367"/>
-</transactions>
-
-Server response:
-<results><error id="367">Permission denied: Cannot cancel order belonging to another account</error></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent1">
-  <order sym="TESTSTOCK" amount="-2" limit="46.52"/>
-</transactions>
-
-Server response:
-<results><opened sym="TESTSTOCK" amount="-1" limit="34.02" id="10964" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent1">
-  <order sym="TESTSTOCK" amount="-4" limit="47.73"/>
-</transactions>
-
-Server response:
-<results><error sym="TESTSTOCK" amount="12" limit="54.51" error="Insufficient funds" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-109
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent5">
-  <query id="10961"/>
-</transactions>
-
-Server response:
-<results><opened sym="TESTSTOCK" amount="-1" limit="36.05" id="10965" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent5">
-  <order sym="TESTSTOCK" amount="19" limit="30.09"/>
-</transactions>
-
-Server response:
-<results><error sym="TESTSTOCK" amount="10" limit="54.64" error="Insufficient funds" /></results>
+<results><opened sym="TESTSTOCK" amount="-1" limit="48.91" id="12034" /></results>
 --------------------------------------------------
 
 --------------------------------------------------
@@ -664,131 +498,23 @@ Sent request:
 140
 <?xml version="1.0" encoding="UTF-8"?>
 <transactions id="concurrent2">
-  <order sym="TESTSTOCK" amount="15" limit="66.45"/>
+  <order sym="TESTSTOCK" amount="-3" limit="11.22"/>
 </transactions>
 
 Server response:
-<results><error sym="TESTSTOCK" amount="12" limit="61.04" error="Insufficient funds" /></results>
+<results><opened sym="TESTSTOCK" amount="3" limit="21.35" id="12035" /></results>
 --------------------------------------------------
 
 --------------------------------------------------
 Sent request:
-109
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent4">
-  <query id="10962"/>
-</transactions>
-
-Server response:
-<results><error sym="TESTSTOCK" amount="6" limit="75.86" error="Insufficient funds" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
+139
 <?xml version="1.0" encoding="UTF-8"?>
 <transactions id="concurrent5">
-  <order sym="TESTSTOCK" amount="10" limit="22.76"/>
+  <order sym="TESTSTOCK" amount="3" limit="48.99"/>
 </transactions>
 
 Server response:
-<results><error sym="TESTSTOCK" amount="16" limit="29.20" error="Insufficient funds" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-108
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent3">
-  <cancel id="107"/>
-</transactions>
-
-Server response:
-<results><error sym="TESTSTOCK" amount="19" limit="23.26" error="Insufficient funds" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent3">
-  <order sym="TESTSTOCK" amount="-3" limit="50.17"/>
-</transactions>
-
-Server response:
-<results><error sym="TESTSTOCK" amount="7" limit="53.83" error="Insufficient funds" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-109
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent3">
-  <query id="10965"/>
-</transactions>
-
-Server response:
-<results><status id="10961"><executed shares="1.0" price="50.0" time="1743607151" /><executed shares="1.0" price="50.0" time="1743607151" /><executed shares="1.0" price="50.0" time="1743607151" /></status></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-109
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent4">
-  <query id="10962"/>
-</transactions>
-
-Server response:
-<results><status id="10962"><open shares="18.0" /></status></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-109
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent2">
-  <query id="10959"/>
-</transactions>
-
-Server response:
-<results><status id="10965"><executed shares="1.0" price="43.25" time="1743607151" /></status></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-108
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent1">
-  <cancel id="495"/>
-</transactions>
-
-Server response:
-<results><error id="107">Permission denied: Cannot cancel order belonging to another account</error></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent3">
-  <order sym="TESTSTOCK" amount="-1" limit="34.08"/>
-</transactions>
-
-Server response:
-<results><status id="10962"><open shares="18.0" /></status></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent5">
-  <order sym="TESTSTOCK" amount="12" limit="31.83"/>
-</transactions>
-
-Server response:
-<results><status id="10959"><executed shares="1.0" price="43.25" time="1743607151" /></status></results>
+<results><error sym="TESTSTOCK" amount="4" limit="29.13" error="Insufficient funds" /></results>
 --------------------------------------------------
 
 --------------------------------------------------
@@ -796,83 +522,23 @@ Sent request:
 110
 <?xml version="1.0" encoding="UTF-8"?>
 <transactions id="concurrent3">
-  <cancel id="10965"/>
+  <cancel id="12033"/>
 </transactions>
 
 Server response:
-<results><error id="495">Permission denied: Cannot cancel order belonging to another account</error></results>
+<results><error sym="TESTSTOCK" amount="5" limit="29.90" error="Insufficient funds" /></results>
 --------------------------------------------------
 
 --------------------------------------------------
 Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent4">
-  <order sym="TESTSTOCK" amount="19" limit="71.55"/>
-</transactions>
-
-Server response:
-<results><error id="10965">Order already fully executed or canceled</error></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-107
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent5">
-  <query id="159"/>
-</transactions>
-
-Server response:
-<results><opened sym="TESTSTOCK" amount="-2" limit="46.52" id="10966" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-108
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent4">
-  <cancel id="386"/>
-</transactions>
-
-Server response:
-<results><error id="159" error="Order not found" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-108
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent3">
-  <cancel id="103"/>
-</transactions>
-
-Server response:
-<results><error id="386">Permission denied: Cannot cancel order belonging to another account</error></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-110
+109
 <?xml version="1.0" encoding="UTF-8"?>
 <transactions id="concurrent1">
-  <cancel id="10966"/>
+  <query id="12035"/>
 </transactions>
 
 Server response:
-<results><error id="103">Permission denied: Cannot cancel order belonging to another account</error></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent1">
-  <order sym="TESTSTOCK" amount="-4" limit="29.37"/>
-</transactions>
-
-Server response:
-<results><opened sym="TESTSTOCK" amount="-4" limit="47.73" id="10967" /></results>
+<results><status id="12035"><open shares="3.0" /></status></results>
 --------------------------------------------------
 
 --------------------------------------------------
@@ -880,299 +546,11 @@ Sent request:
 140
 <?xml version="1.0" encoding="UTF-8"?>
 <transactions id="concurrent2">
-  <order sym="TESTSTOCK" amount="13" limit="20.95"/>
+  <order sym="TESTSTOCK" amount="-2" limit="37.91"/>
 </transactions>
 
 Server response:
-<results><error sym="TESTSTOCK" amount="15" limit="66.45" error="Insufficient funds" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-109
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent5">
-  <query id="10961"/>
-</transactions>
-
-Server response:
-<results><status id="10961"><executed shares="1.0" price="50.0" time="1743607151" /><executed shares="1.0" price="50.0" time="1743607151" /><executed shares="1.0" price="50.0" time="1743607151" /></status></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-109
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent1">
-  <query id="10967"/>
-</transactions>
-
-Server response:
-<results><opened sym="TESTSTOCK" amount="-3" limit="50.17" id="10968" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-110
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent3">
-  <cancel id="10968"/>
-</transactions>
-
-Server response:
-<results><error sym="TESTSTOCK" amount="19" limit="30.09" error="Insufficient funds" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-108
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent1">
-  <cancel id="235"/>
-</transactions>
-
-Server response:
-<results><status id="10967"><open shares="4.0" /></status></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-139
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent1">
-  <order sym="TESTSTOCK" amount="6" limit="33.54"/>
-</transactions>
-
-Server response:
-<results><error id="235">Order not found</error></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-109
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent2">
-  <query id="10960"/>
-</transactions>
-
-Server response:
-<results><status id="10960"><executed shares="1.0" price="50.0" time="1743607151" /><executed shares="1.0" price="50.0" time="1743607151" /></status></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent3">
-  <order sym="TESTSTOCK" amount="-3" limit="31.25"/>
-</transactions>
-
-Server response:
-<results><canceled id="10966"><canceled shares="2.0" time="1743607151" /></canceled></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-107
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent3">
-  <query id="364"/>
-</transactions>
-
-Server response:
-<results><error id="364" error="Permission denied: Order belongs to another account" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-139
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent2">
-  <order sym="TESTSTOCK" amount="9" limit="64.42"/>
-</transactions>
-
-Server response:
-<results><canceled id="10968"><canceled shares="3.0" time="1743607151" /></canceled></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent3">
-  <order sym="TESTSTOCK" amount="11" limit="55.45"/>
-</transactions>
-
-Server response:
-<results><opened sym="TESTSTOCK" amount="10" limit="22.76" id="10969" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-139
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent4">
-  <order sym="TESTSTOCK" amount="8" limit="23.56"/>
-</transactions>
-
-Server response:
-<results><opened sym="TESTSTOCK" amount="-1" limit="34.08" id="10970" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-109
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent2">
-  <query id="10964"/>
-</transactions>
-
-Server response:
-<results><error sym="TESTSTOCK" amount="12" limit="31.83" error="Insufficient funds" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent4">
-  <order sym="TESTSTOCK" amount="12" limit="54.72"/>
-</transactions>
-
-Server response:
-<results><error sym="TESTSTOCK" amount="19" limit="71.55" error="Insufficient funds" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-139
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent5">
-  <order sym="TESTSTOCK" amount="1" limit="44.44"/>
-</transactions>
-
-Server response:
-<results><status id="10964"><executed shares="1.0" price="43.25" time="1743607151" /></status></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-110
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent4">
-  <cancel id="10962"/>
-</transactions>
-
-Server response:
-<results><opened sym="TESTSTOCK" amount="-4" limit="29.37" id="10971" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-109
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent4">
-  <query id="10962"/>
-</transactions>
-
-Server response:
-<results><canceled id="10962"><canceled shares="18.0" time="1743607151" /></canceled></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-108
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent3">
-  <cancel id="465"/>
-</transactions>
-
-Server response:
-<results><status id="10962"><canceled shares="18.0" time="1743607151" /></status></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-139
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent5">
-  <order sym="TESTSTOCK" amount="1" limit="55.77"/>
-</transactions>
-
-Server response:
-<results><error id="465">Permission denied: Cannot cancel order belonging to another account</error></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-108
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent4">
-  <cancel id="222"/>
-</transactions>
-
-Server response:
-<results><error id="222">Order not found</error></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent1">
-  <order sym="TESTSTOCK" amount="-2" limit="62.21"/>
-</transactions>
-
-Server response:
-<results><opened sym="TESTSTOCK" amount="13" limit="20.95" id="10972" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-109
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent1">
-  <query id="10967"/>
-</transactions>
-
-Server response:
-<results><error sym="TESTSTOCK" amount="6" limit="33.54" error="Insufficient funds" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-107
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent4">
-  <cancel id="36"/>
-</transactions>
-
-Server response:
-<results><error id="36">Order not found</error></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-108
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent2">
-  <cancel id="492"/>
-</transactions>
-
-Server response:
-<results><error id="492">Permission denied: Cannot cancel order belonging to another account</error></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent3">
-  <order sym="TESTSTOCK" amount="-3" limit="49.29"/>
-</transactions>
-
-Server response:
-<results><status id="10967"><open shares="4.0" /></status></results>
+<results><opened sym="TESTSTOCK" amount="-1" limit="13.56" id="12036" /></results>
 --------------------------------------------------
 
 --------------------------------------------------
@@ -1180,11 +558,47 @@ Sent request:
 105
 <?xml version="1.0" encoding="UTF-8"?>
 <transactions id="concurrent4">
-  <query id="9"/>
+  <query id="1"/>
 </transactions>
 
 Server response:
-<results><opened sym="TESTSTOCK" amount="-3" limit="31.25" id="10973" /></results>
+<results><canceled id="12033"><canceled shares="3.0" time="1743607691" /></canceled></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+109
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent2">
+  <query id="12032"/>
+</transactions>
+
+Server response:
+<results><error id="1" error="Permission denied: Order belongs to another account" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+140
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent3">
+  <order sym="TESTSTOCK" amount="-1" limit="43.89"/>
+</transactions>
+
+Server response:
+<results><status id="12032"><open shares="4.0" /></status></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+140
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent3">
+  <order sym="TESTSTOCK" amount="-1" limit="40.60"/>
+</transactions>
+
+Server response:
+<results><opened sym="TESTSTOCK" amount="-2" limit="41.95" id="12037" /></results>
 --------------------------------------------------
 
 --------------------------------------------------
@@ -1192,23 +606,47 @@ Sent request:
 139
 <?xml version="1.0" encoding="UTF-8"?>
 <transactions id="concurrent4">
-  <order sym="TESTSTOCK" amount="5" limit="56.24"/>
+  <order sym="TESTSTOCK" amount="3" limit="49.96"/>
 </transactions>
 
 Server response:
-<results><error sym="TESTSTOCK" amount="9" limit="64.42" error="Insufficient funds" /></results>
+<results><error sym="TESTSTOCK" amount="7" limit="34.27" error="Insufficient funds" /></results>
 --------------------------------------------------
 
 --------------------------------------------------
 Sent request:
-110
+106
 <?xml version="1.0" encoding="UTF-8"?>
 <transactions id="concurrent3">
-  <cancel id="10965"/>
+  <query id="46"/>
 </transactions>
 
 Server response:
-<results><error sym="TESTSTOCK" amount="11" limit="55.45" error="Insufficient funds" /></results>
+<results><error sym="TESTSTOCK" amount="9" limit="31.06" error="Insufficient funds" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+106
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent3">
+  <query id="72"/>
+</transactions>
+
+Server response:
+<results><error id="46" error="Order not found" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+106
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent5">
+  <query id="77"/>
+</transactions>
+
+Server response:
+<results><error id="72" error="Permission denied: Order belongs to another account" /></results>
 --------------------------------------------------
 
 --------------------------------------------------
@@ -1216,31 +654,55 @@ Sent request:
 109
 <?xml version="1.0" encoding="UTF-8"?>
 <transactions id="concurrent5">
-  <query id="10961"/>
+  <query id="12034"/>
 </transactions>
 
 Server response:
-<results><error id="10965">Order already fully executed or canceled</error></results>
+<results><status id="12034"><open shares="1.0" /></status></results>
 --------------------------------------------------
 
 --------------------------------------------------
 Sent request:
-110
+106
 <?xml version="1.0" encoding="UTF-8"?>
 <transactions id="concurrent2">
-  <cancel id="10963"/>
+  <query id="84"/>
 </transactions>
 
 Server response:
-<results><status id="10961"><executed shares="1.0" price="50.0" time="1743607151" /><executed shares="1.0" price="50.0" time="1743607151" /><executed shares="1.0" price="50.0" time="1743607151" /></status></results>
+<results><error id="77" error="Permission denied: Order belongs to another account" /></results>
 --------------------------------------------------
 
 --------------------------------------------------
 Sent request:
-140
+139
 <?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent2">
-  <order sym="TESTSTOCK" amount="-3" limit="65.95"/>
+<transactions id="concurrent1">
+  <order sym="TESTSTOCK" amount="8" limit="41.06"/>
+</transactions>
+
+Server response:
+<results><error id="84" error="Permission denied: Order belongs to another account" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+109
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent5">
+  <query id="12034"/>
+</transactions>
+
+Server response:
+<results><status id="12034"><open shares="1.0" /></status></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+105
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent3">
+  <query id="9"/>
 </transactions>
 
 Server response:
@@ -1249,38 +711,146 @@ Server response:
 
 --------------------------------------------------
 Sent request:
+109
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent5">
+  <query id="12034"/>
+</transactions>
+
+Server response:
+<results><opened sym="TESTSTOCK" amount="5" limit="46.49" id="12038" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+109
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent5">
+  <query id="12038"/>
+</transactions>
+
+Server response:
+<results><error sym="TESTSTOCK" amount="8" limit="24.49" error="Insufficient funds" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
 140
 <?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent3">
-  <order sym="TESTSTOCK" amount="-5" limit="62.52"/>
+<transactions id="concurrent2">
+  <order sym="TESTSTOCK" amount="-3" limit="10.10"/>
 </transactions>
 
 Server response:
-<results><canceled id="10963"><canceled shares="10.0" time="1743607151" /></canceled></results>
+<results><status id="12034"><open shares="1.0" /></status></results>
 --------------------------------------------------
 
 --------------------------------------------------
 Sent request:
-108
+109
 <?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent4">
-  <cancel id="391"/>
+<transactions id="concurrent1">
+  <query id="12037"/>
 </transactions>
 
 Server response:
-<results><error id="391">Permission denied: Cannot cancel order belonging to another account</error></results>
+<results><status id="12037"><open shares="2.0" /></status></results>
 --------------------------------------------------
 
 --------------------------------------------------
 Sent request:
-110
+139
 <?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent3">
-  <cancel id="10973"/>
+<transactions id="concurrent5">
+  <order sym="TESTSTOCK" amount="7" limit="21.00"/>
 </transactions>
 
 Server response:
-<results><error id="10973">Order already fully executed or canceled</error></results>
+<results><status id="12038"><executed shares="2.0" price="34.66" time="1743607691" /><executed shares="1.0" price="35.68" time="1743607691" /><executed shares="2.0" price="36.92" time="1743607691" /></status></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+139
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent2">
+  <order sym="TESTSTOCK" amount="3" limit="35.66"/>
+</transactions>
+
+Server response:
+<results><opened sym="TESTSTOCK" amount="-3" limit="11.22" id="12039" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+106
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent3">
+  <query id="92"/>
+</transactions>
+
+Server response:
+<results><error sym="TESTSTOCK" amount="3" limit="48.99" error="Insufficient funds" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+139
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent2">
+  <order sym="TESTSTOCK" amount="4" limit="33.33"/>
+</transactions>
+
+Server response:
+<results><error id="92" error="Permission denied: Order belongs to another account" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+139
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent5">
+  <order sym="TESTSTOCK" amount="1" limit="32.85"/>
+</transactions>
+
+Server response:
+<results><opened sym="TESTSTOCK" amount="-2" limit="37.91" id="12040" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+139
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent3">
+  <order sym="TESTSTOCK" amount="4" limit="19.28"/>
+</transactions>
+
+Server response:
+<results><opened sym="TESTSTOCK" amount="-1" limit="43.89" id="12041" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+140
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent5">
+  <order sym="TESTSTOCK" amount="-1" limit="42.21"/>
+</transactions>
+
+Server response:
+<results><opened sym="TESTSTOCK" amount="-1" limit="40.60" id="12042" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+109
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent3">
+  <query id="12041"/>
+</transactions>
+
+Server response:
+<results><status id="12041"><open shares="1.0" /></status></results>
 --------------------------------------------------
 
 --------------------------------------------------
@@ -1288,503 +858,731 @@ Sent request:
 140
 <?xml version="1.0" encoding="UTF-8"?>
 <transactions id="concurrent1">
-  <order sym="TESTSTOCK" amount="-5" limit="45.43"/>
+  <order sym="TESTSTOCK" amount="-2" limit="39.26"/>
 </transactions>
 
 Server response:
-<results><opened sym="TESTSTOCK" amount="8" limit="23.56" id="10974" /></results>
+<results><opened sym="TESTSTOCK" amount="3" limit="49.96" id="12043" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+110
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent5">
+  <cancel id="12034"/>
+</transactions>
+
+Server response:
+<results><error sym="TESTSTOCK" amount="8" limit="41.06" error="Insufficient funds" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+140
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent1">
+  <order sym="TESTSTOCK" amount="-3" limit="37.05"/>
+</transactions>
+
+Server response:
+<results><canceled id="12034"><canceled shares="1.0" time="1743607691" /></canceled></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+140
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent4">
+  <order sym="TESTSTOCK" amount="-1" limit="12.27"/>
+</transactions>
+
+Server response:
+<results><opened sym="TESTSTOCK" amount="-3" limit="10.10" id="12044" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+109
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent4">
+  <query id="12043"/>
+</transactions>
+
+Server response:
+<results><status id="12043"><executed shares="2.0" price="37.91" time="1743607691" /><executed shares="1.0" price="39.32" time="1743607691" /></status></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+109
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent2">
+  <query id="12032"/>
+</transactions>
+
+Server response:
+<results><opened sym="TESTSTOCK" amount="3" limit="35.66" id="12045" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+139
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent5">
+  <order sym="TESTSTOCK" amount="9" limit="31.39"/>
+</transactions>
+
+Server response:
+<results><status id="12032"><open shares="4.0" /></status></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+109
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent2">
+  <query id="12039"/>
+</transactions>
+
+Server response:
+<results><error sym="TESTSTOCK" amount="7" limit="21.00" error="Insufficient funds" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+109
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent1">
+  <query id="12037"/>
+</transactions>
+
+Server response:
+<results><status id="12037"><open shares="2.0" /></status></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+139
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent5">
+  <order sym="TESTSTOCK" amount="6" limit="26.15"/>
+</transactions>
+
+Server response:
+<results><status id="12039"><executed shares="3.0" price="33.69" time="1743607691" /></status></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+139
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent3">
+  <order sym="TESTSTOCK" amount="2" limit="36.74"/>
+</transactions>
+
+Server response:
+<results><opened sym="TESTSTOCK" amount="4" limit="33.33" id="12046" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+109
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent2">
+  <query id="12046"/>
+</transactions>
+
+Server response:
+<results><status id="12046"><open shares="4.0" /></status></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+139
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent5">
+  <order sym="TESTSTOCK" amount="3" limit="13.16"/>
+</transactions>
+
+Server response:
+<results><opened sym="TESTSTOCK" amount="1" limit="32.85" id="12047" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+139
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent2">
+  <order sym="TESTSTOCK" amount="5" limit="24.29"/>
+</transactions>
+
+Server response:
+<results><opened sym="TESTSTOCK" amount="4" limit="19.28" id="12048" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+110
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent1">
+  <cancel id="12037"/>
+</transactions>
+
+Server response:
+<results><opened sym="TESTSTOCK" amount="-1" limit="42.21" id="12049" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+109
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent5">
+  <query id="12038"/>
+</transactions>
+
+Server response:
+<results><canceled id="12037"><canceled shares="2.0" time="1743607691" /></canceled></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+109
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent2">
+  <query id="12040"/>
+</transactions>
+
+Server response:
+<results><status id="12038"><executed shares="2.0" price="34.66" time="1743607691" /><executed shares="1.0" price="35.68" time="1743607691" /><executed shares="2.0" price="36.92" time="1743607691" /></status></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+109
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent1">
+  <query id="12031"/>
+</transactions>
+
+Server response:
+<results><status id="12040"><executed shares="2.0" price="37.91" time="1743607691" /></status></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+140
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent3">
+  <order sym="TESTSTOCK" amount="-3" limit="45.11"/>
+</transactions>
+
+Server response:
+<results><status id="12031"><open shares="1.0" /></status></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+109
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent3">
+  <query id="12048"/>
+</transactions>
+
+Server response:
+<results><status id="12048"><open shares="4.0" /></status></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+139
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent2">
+  <order sym="TESTSTOCK" amount="4" limit="48.69"/>
+</transactions>
+
+Server response:
+<results><opened sym="TESTSTOCK" amount="-2" limit="39.26" id="12050" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+139
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent5">
+  <order sym="TESTSTOCK" amount="7" limit="13.56"/>
+</transactions>
+
+Server response:
+<results><opened sym="TESTSTOCK" amount="-3" limit="37.05" id="12051" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+140
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent5">
+  <order sym="TESTSTOCK" amount="-2" limit="33.89"/>
+</transactions>
+
+Server response:
+<results><opened sym="TESTSTOCK" amount="-1" limit="12.27" id="12052" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+109
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent3">
+  <query id="12041"/>
+</transactions>
+
+Server response:
+<results><error sym="TESTSTOCK" amount="9" limit="31.39" error="Insufficient funds" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+139
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent2">
+  <order sym="TESTSTOCK" amount="4" limit="40.53"/>
+</transactions>
+
+Server response:
+<results><status id="12041"><open shares="1.0" /></status></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+139
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent4">
+  <order sym="TESTSTOCK" amount="9" limit="35.25"/>
+</transactions>
+
+Server response:
+<results><error sym="TESTSTOCK" amount="6" limit="26.15" error="Insufficient funds" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+140
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent4">
+  <order sym="TESTSTOCK" amount="-3" limit="25.96"/>
+</transactions>
+
+Server response:
+<results><opened sym="TESTSTOCK" amount="2" limit="36.74" id="12053" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+110
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent1">
+  <cancel id="12031"/>
+</transactions>
+
+Server response:
+<results><canceled id="12031"><canceled shares="1.0" time="1743607692" /></canceled></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+139
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent1">
+  <order sym="TESTSTOCK" amount="4" limit="46.08"/>
+</transactions>
+
+Server response:
+<results><opened sym="TESTSTOCK" amount="3" limit="13.16" id="12054" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+140
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent5">
+  <order sym="TESTSTOCK" amount="-3" limit="16.53"/>
+</transactions>
+
+Server response:
+<results><opened sym="TESTSTOCK" amount="5" limit="24.29" id="12055" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+139
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent5">
+  <order sym="TESTSTOCK" amount="9" limit="31.02"/>
+</transactions>
+
+Server response:
+<results><opened sym="TESTSTOCK" amount="-3" limit="45.11" id="12056" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+140
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent2">
+  <order sym="TESTSTOCK" amount="-1" limit="37.08"/>
+</transactions>
+
+Server response:
+<results><error sym="TESTSTOCK" amount="7" limit="13.56" error="Insufficient funds" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+140
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent1">
+  <order sym="TESTSTOCK" amount="-1" limit="48.28"/>
+</transactions>
+
+Server response:
+<results><error sym="TESTSTOCK" amount="4" limit="48.69" error="Insufficient funds" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+106
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent3">
+  <query id="55"/>
+</transactions>
+
+Server response:
+<results><error id="55" error="Order not found" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+109
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent2">
+  <query id="12045"/>
+</transactions>
+
+Server response:
+<results><opened sym="TESTSTOCK" amount="-2" limit="33.89" id="12057" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+109
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent3">
+  <query id="12042"/>
+</transactions>
+
+Server response:
+<results><error sym="TESTSTOCK" amount="4" limit="40.53" error="Insufficient funds" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+139
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent2">
+  <order sym="TESTSTOCK" amount="7" limit="35.15"/>
+</transactions>
+
+Server response:
+<results><status id="12045"><open shares="2.0" /><executed shares="1.0" price="35.66" time="1743607691" /></status></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+139
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent4">
+  <order sym="TESTSTOCK" amount="8" limit="32.95"/>
+</transactions>
+
+Server response:
+<results><status id="12042"><open shares="1.0" /></status></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+139
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent3">
+  <order sym="TESTSTOCK" amount="6" limit="12.65"/>
+</transactions>
+
+Server response:
+<results><opened sym="TESTSTOCK" amount="-3" limit="25.96" id="12058" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+140
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent5">
+  <order sym="TESTSTOCK" amount="-3" limit="10.49"/>
+</transactions>
+
+Server response:
+<results><error sym="TESTSTOCK" amount="9" limit="35.25" error="Insufficient funds" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+109
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent1">
+  <query id="12051"/>
+</transactions>
+
+Server response:
+<results><error sym="TESTSTOCK" amount="4" limit="46.08" error="Insufficient funds" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+110
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent1">
+  <cancel id="12035"/>
+</transactions>
+
+Server response:
+<results><status id="12051"><open shares="3.0" /></status></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+109
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent5">
+  <query id="12047"/>
+</transactions>
+
+Server response:
+<results><canceled id="12035"><canceled shares="3.0" time="1743607692" /></canceled></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+140
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent1">
+  <order sym="TESTSTOCK" amount="-1" limit="24.69"/>
+</transactions>
+
+Server response:
+<results><status id="12047"><open shares="1.0" /></status></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+109
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent5">
+  <query id="12057"/>
+</transactions>
+
+Server response:
+<results><opened sym="TESTSTOCK" amount="-3" limit="16.53" id="12059" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+139
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent3">
+  <order sym="TESTSTOCK" amount="6" limit="33.03"/>
+</transactions>
+
+Server response:
+<results><status id="12057"><executed shares="2.0" price="36.74" time="1743607692" /></status></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+139
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent2">
+  <order sym="TESTSTOCK" amount="5" limit="40.04"/>
+</transactions>
+
+Server response:
+<results><error sym="TESTSTOCK" amount="9" limit="31.02" error="Insufficient funds" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+109
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent3">
+  <query id="12042"/>
+</transactions>
+
+Server response:
+<results><status id="12042"><open shares="1.0" /></status></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+140
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent1">
+  <order sym="TESTSTOCK" amount="-3" limit="32.29"/>
+</transactions>
+
+Server response:
+<results><opened sym="TESTSTOCK" amount="-1" limit="37.08" id="12060" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+140
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent2">
+  <order sym="TESTSTOCK" amount="-2" limit="28.88"/>
+</transactions>
+
+Server response:
+<results><opened sym="TESTSTOCK" amount="-1" limit="48.28" id="12061" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+109
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent3">
+  <query id="12056"/>
+</transactions>
+
+Server response:
+<results><error sym="TESTSTOCK" amount="7" limit="35.15" error="Insufficient funds" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+109
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent2">
+  <query id="12036"/>
+</transactions>
+
+Server response:
+<results><error sym="TESTSTOCK" amount="8" limit="32.95" error="Insufficient funds" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+140
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent1">
+  <order sym="TESTSTOCK" amount="10" limit="13.25"/>
+</transactions>
+
+Server response:
+<results><error sym="TESTSTOCK" amount="6" limit="12.65" error="Insufficient funds" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+109
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent5">
+  <query id="12047"/>
+</transactions>
+
+Server response:
+<results><status id="12036"><executed shares="1.0" price="33.69" time="1743607691" /></status></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+139
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent2">
+  <order sym="TESTSTOCK" amount="7" limit="36.51"/>
+</transactions>
+
+Server response:
+<results><status id="12047"><open shares="1.0" /></status></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+139
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent4">
+  <order sym="TESTSTOCK" amount="8" limit="19.68"/>
+</transactions>
+
+Server response:
+<results><status id="12056"><open shares="3.0" /></status></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+140
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent3">
+  <order sym="TESTSTOCK" amount="-3" limit="44.75"/>
+</transactions>
+
+Server response:
+<results><opened sym="TESTSTOCK" amount="-3" limit="10.49" id="12062" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+106
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent5">
+  <query id="72"/>
+</transactions>
+
+Server response:
+<results><error id="72" error="Permission denied: Order belongs to another account" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+140
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent1">
+  <order sym="TESTSTOCK" amount="-2" limit="16.07"/>
+</transactions>
+
+Server response:
+<results><opened sym="TESTSTOCK" amount="-1" limit="24.69" id="12063" /></results>
 --------------------------------------------------
 
 --------------------------------------------------
 Sent request:
 107
 <?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent3">
-  <query id="203"/>
-</transactions>
-
-Server response:
-<results><error sym="TESTSTOCK" amount="12" limit="54.72" error="Insufficient funds" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-108
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent1">
-  <cancel id="378"/>
-</transactions>
-
-Server response:
-<results><error sym="TESTSTOCK" amount="1" limit="44.44" error="Insufficient funds" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent1">
-  <order sym="TESTSTOCK" amount="19" limit="63.80"/>
-</transactions>
-
-Server response:
-<results><error sym="TESTSTOCK" amount="1" limit="55.77" error="Insufficient funds" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-109
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent3">
-  <query id="10973"/>
-</transactions>
-
-Server response:
-<results><error id="378">Order already fully executed or canceled</error></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent1">
-  <order sym="TESTSTOCK" amount="-5" limit="71.98"/>
-</transactions>
-
-Server response:
-<results><error id="203" error="Permission denied: Order belongs to another account" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-110
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent5">
-  <cancel id="10969"/>
-</transactions>
-
-Server response:
-<results><status id="10973"><executed shares="3.0" price="42.22" time="1743607151" /></status></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-109
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent1">
-  <query id="10971"/>
-</transactions>
-
-Server response:
-<results><opened sym="TESTSTOCK" amount="-2" limit="62.21" id="10975" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-108
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent5">
-  <cancel id="100"/>
-</transactions>
-
-Server response:
-<results><status id="10971"><executed shares="4.0" price="42.22" time="1743607151" /></status></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-107
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent1">
-  <query id="414"/>
-</transactions>
-
-Server response:
-<results><canceled id="10969"><canceled shares="10.0" time="1743607152" /></canceled></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-110
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent3">
-  <cancel id="10973"/>
-</transactions>
-
-Server response:
-<results><error id="100">Permission denied: Cannot cancel order belonging to another account</error></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-109
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent1">
-  <query id="10971"/>
-</transactions>
-
-Server response:
-<results><error id="10973">Order already fully executed or canceled</error></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-110
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent5">
-  <cancel id="10961"/>
-</transactions>
-
-Server response:
-<results><error id="414" error="Permission denied: Order belongs to another account" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent2">
-  <order sym="TESTSTOCK" amount="15" limit="77.34"/>
-</transactions>
-
-Server response:
-<results><status id="10971"><executed shares="4.0" price="42.22" time="1743607151" /></status></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-110
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent5">
-  <cancel id="10961"/>
-</transactions>
-
-Server response:
-<results><error id="10961">Order already fully executed or canceled</error></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-108
-<?xml version="1.0" encoding="UTF-8"?>
 <transactions id="concurrent4">
-  <cancel id="289"/>
+  <cancel id="89"/>
 </transactions>
 
 Server response:
-<results><error id="10961">Order already fully executed or canceled</error></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent3">
-  <order sym="TESTSTOCK" amount="19" limit="54.47"/>
-</transactions>
-
-Server response:
-<results><error id="289">Order not found</error></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-108
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent3">
-  <cancel id="459"/>
-</transactions>
-
-Server response:
-<results><error id="459">Permission denied: Cannot cancel order belonging to another account</error></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent1">
-  <order sym="TESTSTOCK" amount="-1" limit="68.82"/>
-</transactions>
-
-Server response:
-<results><opened sym="TESTSTOCK" amount="-3" limit="49.29" id="10976" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-109
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent5">
-  <query id="10961"/>
-</transactions>
-
-Server response:
-<results><error sym="TESTSTOCK" amount="5" limit="56.24" error="Insufficient funds" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent1">
-  <order sym="TESTSTOCK" amount="14" limit="50.90"/>
-</transactions>
-
-Server response:
-<results><status id="10961"><executed shares="1.0" price="50.0" time="1743607151" /><executed shares="1.0" price="50.0" time="1743607151" /><executed shares="1.0" price="50.0" time="1743607151" /></status></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent2">
-  <order sym="TESTSTOCK" amount="13" limit="46.95"/>
-</transactions>
-
-Server response:
-<results><opened sym="TESTSTOCK" amount="-3" limit="65.95" id="10977" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent1">
-  <order sym="TESTSTOCK" amount="14" limit="27.37"/>
-</transactions>
-
-Server response:
-<results><opened sym="TESTSTOCK" amount="-5" limit="62.52" id="10978" /></results>
+<results><error sym="TESTSTOCK" amount="6" limit="33.03" error="Insufficient funds" /></results>
 --------------------------------------------------
 
 --------------------------------------------------
 Sent request:
 139
 <?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent2">
-  <order sym="TESTSTOCK" amount="2" limit="23.93"/>
-</transactions>
-
-Server response:
-<results><error sym="TESTSTOCK" amount="19" limit="63.80" error="Insufficient funds" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-109
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent4">
-  <query id="10974"/>
-</transactions>
-
-Server response:
-<results><status id="10974"><open shares="8.0" /></status></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent3">
-  <order sym="TESTSTOCK" amount="16" limit="23.06"/>
-</transactions>
-
-Server response:
-<results><opened sym="TESTSTOCK" amount="-5" limit="45.43" id="10979" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-110
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent3">
-  <cancel id="10978"/>
-</transactions>
-
-Server response:
-<results><canceled id="10978"><canceled shares="5.0" time="1743607152" /></canceled></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent4">
-  <order sym="TESTSTOCK" amount="10" limit="51.87"/>
-</transactions>
-
-Server response:
-<results><opened sym="TESTSTOCK" amount="-5" limit="71.98" id="10980" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-139
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent2">
-  <order sym="TESTSTOCK" amount="7" limit="48.03"/>
-</transactions>
-
-Server response:
-<results><error sym="TESTSTOCK" amount="19" limit="54.47" error="Insufficient funds" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-110
-<?xml version="1.0" encoding="UTF-8"?>
 <transactions id="concurrent1">
-  <cancel id="10975"/>
+  <order sym="TESTSTOCK" amount="3" limit="21.10"/>
 </transactions>
 
 Server response:
-<results><error sym="TESTSTOCK" amount="15" limit="77.34" error="Insufficient funds" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-107
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent1">
-  <query id="442"/>
-</transactions>
-
-Server response:
-<results><error id="442" error="Permission denied: Order belongs to another account" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-139
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent5">
-  <order sym="TESTSTOCK" amount="3" limit="43.47"/>
-</transactions>
-
-Server response:
-<results><opened sym="TESTSTOCK" amount="-1" limit="68.82" id="10981" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-109
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent3">
-  <query id="10965"/>
-</transactions>
-
-Server response:
-<results><status id="10965"><executed shares="1.0" price="43.25" time="1743607151" /></status></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent3">
-  <order sym="TESTSTOCK" amount="-2" limit="55.97"/>
-</transactions>
-
-Server response:
-<results><canceled id="10975"><canceled shares="2.0" time="1743607152" /></canceled></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent2">
-  <order sym="TESTSTOCK" amount="-5" limit="31.04"/>
-</transactions>
-
-Server response:
-<results><error sym="TESTSTOCK" amount="14" limit="50.90" error="Insufficient funds" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-110
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent3">
-  <cancel id="10965"/>
-</transactions>
-
-Server response:
-<results><error sym="TESTSTOCK" amount="13" limit="46.95" error="Insufficient funds" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-109
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent3">
-  <query id="10970"/>
-</transactions>
-
-Server response:
-<results><error sym="TESTSTOCK" amount="14" limit="27.37" error="Insufficient funds" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent2">
-  <order sym="TESTSTOCK" amount="-5" limit="42.45"/>
-</transactions>
-
-Server response:
-<results><error id="10965">Order already fully executed or canceled</error></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-109
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent5">
-  <query id="10961"/>
-</transactions>
-
-Server response:
-<results><status id="10970"><executed shares="1.0" price="43.25" time="1743607151" /></status></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-139
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent2">
-  <order sym="TESTSTOCK" amount="9" limit="67.06"/>
-</transactions>
-
-Server response:
-<results><status id="10961"><executed shares="1.0" price="50.0" time="1743607151" /><executed shares="1.0" price="50.0" time="1743607151" /><executed shares="1.0" price="50.0" time="1743607151" /></status></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-110
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent4">
-  <cancel id="10974"/>
-</transactions>
-
-Server response:
-<results><canceled id="10974"><canceled shares="8.0" time="1743607152" /></canceled></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-109
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent1">
-  <query id="10967"/>
-</transactions>
-
-Server response:
-<results><status id="10967"><open shares="4.0" /></status></results>
+<results><error sym="TESTSTOCK" amount="5" limit="40.04" error="Insufficient funds" /></results>
 --------------------------------------------------
 
 --------------------------------------------------
@@ -1792,59 +1590,191 @@ Sent request:
 139
 <?xml version="1.0" encoding="UTF-8"?>
 <transactions id="concurrent3">
-  <order sym="TESTSTOCK" amount="9" limit="24.72"/>
+  <order sym="TESTSTOCK" amount="3" limit="28.65"/>
 </transactions>
 
 Server response:
-<results><opened sym="TESTSTOCK" amount="16" limit="23.06" id="10982" /></results>
+<results><error id="89">Permission denied: Cannot cancel order belonging to another account</error></results>
 --------------------------------------------------
 
 --------------------------------------------------
 Sent request:
-140
+109
 <?xml version="1.0" encoding="UTF-8"?>
 <transactions id="concurrent4">
-  <order sym="TESTSTOCK" amount="17" limit="59.22"/>
+  <query id="12058"/>
 </transactions>
 
 Server response:
-<results><opened sym="TESTSTOCK" amount="2" limit="23.93" id="10983" /></results>
+<results><opened sym="TESTSTOCK" amount="-3" limit="32.29" id="12064" /></results>
 --------------------------------------------------
 
 --------------------------------------------------
 Sent request:
-140
+109
 <?xml version="1.0" encoding="UTF-8"?>
 <transactions id="concurrent4">
-  <order sym="TESTSTOCK" amount="14" limit="50.60"/>
+  <query id="12052"/>
 </transactions>
 
 Server response:
-<results><error sym="TESTSTOCK" amount="10" limit="51.87" error="Insufficient funds" /></results>
+<results><status id="12058"><executed shares="2.0" price="35.66" time="1743607692" /><executed shares="1.0" price="33.69" time="1743607692" /></status></results>
 --------------------------------------------------
 
 --------------------------------------------------
 Sent request:
-140
+109
 <?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent2">
-  <order sym="TESTSTOCK" amount="15" limit="77.88"/>
+<transactions id="concurrent1">
+  <query id="12063"/>
 </transactions>
 
 Server response:
-<results><opened sym="TESTSTOCK" amount="7" limit="48.03" id="10984" /></results>
+<results><status id="12052"><executed shares="1.0" price="35.66" time="1743607691" /></status></results>
 --------------------------------------------------
 
 --------------------------------------------------
 Sent request:
-140
+139
 <?xml version="1.0" encoding="UTF-8"?>
 <transactions id="concurrent3">
-  <order sym="TESTSTOCK" amount="18" limit="46.71"/>
+  <order sym="TESTSTOCK" amount="7" limit="19.12"/>
 </transactions>
 
 Server response:
-<results><opened sym="TESTSTOCK" amount="3" limit="43.47" id="10985" /></results>
+<results><status id="12063"><executed shares="1.0" price="33.69" time="1743607692" /></status></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+109
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent4">
+  <query id="12058"/>
+</transactions>
+
+Server response:
+<results><opened sym="TESTSTOCK" amount="-2" limit="28.88" id="12065" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+109
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent4">
+  <query id="12052"/>
+</transactions>
+
+Server response:
+<results><status id="12058"><executed shares="2.0" price="35.66" time="1743607692" /><executed shares="1.0" price="33.69" time="1743607692" /></status></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+109
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent1">
+  <query id="12051"/>
+</transactions>
+
+Server response:
+<results><status id="12051"><open shares="3.0" /></status></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+139
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent3">
+  <order sym="TESTSTOCK" amount="5" limit="41.12"/>
+</transactions>
+
+Server response:
+<results><status id="12052"><executed shares="1.0" price="35.66" time="1743607691" /></status></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+109
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent4">
+  <query id="12058"/>
+</transactions>
+
+Server response:
+<results><status id="12058"><executed shares="2.0" price="35.66" time="1743607692" /><executed shares="1.0" price="33.69" time="1743607692" /></status></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+109
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent1">
+  <query id="12050"/>
+</transactions>
+
+Server response:
+<results><status id="12050"><open shares="2.0" /></status></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+139
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent3">
+  <order sym="TESTSTOCK" amount="1" limit="31.89"/>
+</transactions>
+
+Server response:
+<results><opened sym="TESTSTOCK" amount="10" limit="13.25" id="12066" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+139
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent1">
+  <order sym="TESTSTOCK" amount="9" limit="48.85"/>
+</transactions>
+
+Server response:
+<results><error sym="TESTSTOCK" amount="7" limit="36.51" error="Insufficient funds" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+109
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent4">
+  <query id="12052"/>
+</transactions>
+
+Server response:
+<results><error sym="TESTSTOCK" amount="8" limit="19.68" error="Insufficient funds" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+139
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent1">
+  <order sym="TESTSTOCK" amount="2" limit="15.66"/>
+</transactions>
+
+Server response:
+<results><status id="12052"><executed shares="1.0" price="35.66" time="1743607691" /></status></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+139
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent5">
+  <order sym="TESTSTOCK" amount="4" limit="14.22"/>
+</transactions>
+
+Server response:
+<results><opened sym="TESTSTOCK" amount="-3" limit="44.75" id="12067" /></results>
 --------------------------------------------------
 
 --------------------------------------------------
@@ -1852,64 +1782,35 @@ Sent request:
 107
 <?xml version="1.0" encoding="UTF-8"?>
 <transactions id="concurrent2">
-  <cancel id="16"/>
+  <cancel id="17"/>
 </transactions>
 
 Server response:
-<results><error id="16">Permission denied: Cannot cancel order belonging to another account</error></results>
+<results><error id="17">Permission denied: Cannot cancel order belonging to another account</error></results>
 --------------------------------------------------
 
 --------------------------------------------------
 Sent request:
-108
+109
 <?xml version="1.0" encoding="UTF-8"?>
 <transactions id="concurrent3">
-  <cancel id="107"/>
+  <query id="12067"/>
 </transactions>
 
 Server response:
-<results><error id="107">Permission denied: Cannot cancel order belonging to another account</error></results>
---------------------------------------------------
-
-Thread 7 completed: success=8, errors=12, race_conditions=0
-Server response:
-<results><opened sym="TESTSTOCK" amount="-2" limit="55.97" id="10986" /></results>
+<results><status id="12067"><open shares="3.0" /></status></results>
 --------------------------------------------------
 
 --------------------------------------------------
 Sent request:
-110
+109
 <?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent1">
-  <cancel id="10981"/>
+<transactions id="concurrent3">
+  <query id="12042"/>
 </transactions>
 
 Server response:
-<results><canceled id="10981"><canceled shares="1.0" time="1743607152" /></canceled></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent2">
-  <order sym="TESTSTOCK" amount="10" limit="50.98"/>
-</transactions>
-
-Server response:
-<results><opened sym="TESTSTOCK" amount="-5" limit="31.04" id="10987" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent4">
-  <order sym="TESTSTOCK" amount="10" limit="58.11"/>
-</transactions>
-
-Server response:
-<results><opened sym="TESTSTOCK" amount="-5" limit="42.45" id="10988" /></results>
+<results><status id="12042"><open shares="1.0" /></status></results>
 --------------------------------------------------
 
 --------------------------------------------------
@@ -1917,83 +1818,11 @@ Sent request:
 109
 <?xml version="1.0" encoding="UTF-8"?>
 <transactions id="concurrent2">
-  <query id="10972"/>
+  <query id="12055"/>
 </transactions>
 
 Server response:
-<results><error sym="TESTSTOCK" amount="9" limit="67.06" error="Insufficient funds" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent4">
-  <order sym="TESTSTOCK" amount="16" limit="76.45"/>
-</transactions>
-
-Server response:
-<results><error sym="TESTSTOCK" amount="9" limit="24.72" error="Insufficient funds" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-108
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent4">
-  <cancel id="441"/>
-</transactions>
-
-Server response:
-<results><error sym="TESTSTOCK" amount="17" limit="59.22" error="Insufficient funds" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-107
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent2">
-  <query id="212"/>
-</transactions>
-
-Server response:
-<results><error sym="TESTSTOCK" amount="15" limit="77.88" error="Insufficient funds" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-107
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent3">
-  <query id="462"/>
-</transactions>
-
-Server response:
-<results><error sym="TESTSTOCK" amount="14" limit="50.60" error="Insufficient funds" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-109
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent2">
-  <query id="10964"/>
-</transactions>
-
-Server response:
-<results><error sym="TESTSTOCK" amount="18" limit="46.71" error="Insufficient funds" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent1">
-  <order sym="TESTSTOCK" amount="-2" limit="36.50"/>
-</transactions>
-
-Server response:
-<results><error id="212" error="Permission denied: Order belongs to another account" /></results>
+<results><status id="12055"><open shares="5.0" /></status></results>
 --------------------------------------------------
 
 --------------------------------------------------
@@ -2001,23 +1830,23 @@ Sent request:
 139
 <?xml version="1.0" encoding="UTF-8"?>
 <transactions id="concurrent3">
-  <order sym="TESTSTOCK" amount="1" limit="49.82"/>
+  <order sym="TESTSTOCK" amount="5" limit="35.27"/>
 </transactions>
 
 Server response:
-<results><error sym="TESTSTOCK" amount="10" limit="50.98" error="Insufficient funds" /></results>
+<results><opened sym="TESTSTOCK" amount="3" limit="21.10" id="12068" /></results>
 --------------------------------------------------
 
 --------------------------------------------------
 Sent request:
-108
+140
 <?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent1">
-  <cancel id="394"/>
+<transactions id="concurrent3">
+  <order sym="TESTSTOCK" amount="-2" limit="26.75"/>
 </transactions>
 
 Server response:
-<results><error sym="TESTSTOCK" amount="10" limit="58.11" error="Insufficient funds" /></results>
+<results><opened sym="TESTSTOCK" amount="-2" limit="16.07" id="12069" /></results>
 --------------------------------------------------
 
 --------------------------------------------------
@@ -2025,35 +1854,83 @@ Sent request:
 109
 <?xml version="1.0" encoding="UTF-8"?>
 <transactions id="concurrent3">
-  <query id="10965"/>
+  <query id="12042"/>
 </transactions>
 
 Server response:
-<results><error id="441">Permission denied: Cannot cancel order belonging to another account</error></results>
+<results><error sym="TESTSTOCK" amount="3" limit="28.65" error="Insufficient funds" /></results>
 --------------------------------------------------
 
 --------------------------------------------------
 Sent request:
 140
 <?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent1">
-  <order sym="TESTSTOCK" amount="-3" limit="79.38"/>
+<transactions id="concurrent3">
+  <order sym="TESTSTOCK" amount="-2" limit="34.24"/>
 </transactions>
 
 Server response:
-<results><status id="10972"><open shares="13.0" /></status></results>
+<results><error sym="TESTSTOCK" amount="7" limit="19.12" error="Insufficient funds" /></results>
 --------------------------------------------------
 
 --------------------------------------------------
 Sent request:
-110
+139
 <?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent2">
-  <cancel id="10977"/>
+<transactions id="concurrent3">
+  <order sym="TESTSTOCK" amount="3" limit="37.08"/>
 </transactions>
 
 Server response:
-<results><error sym="TESTSTOCK" amount="16" limit="76.45" error="Insufficient funds" /></results>
+<results><error sym="TESTSTOCK" amount="5" limit="41.12" error="Insufficient funds" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+109
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent3">
+  <query id="12041"/>
+</transactions>
+
+Server response:
+<results><status id="12042"><open shares="1.0" /></status></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+106
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent3">
+  <query id="52"/>
+</transactions>
+
+Server response:
+<results><error sym="TESTSTOCK" amount="1" limit="31.89" error="Insufficient funds" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+140
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent3">
+  <order sym="TESTSTOCK" amount="-2" limit="20.56"/>
+</transactions>
+
+Server response:
+<results><error sym="TESTSTOCK" amount="9" limit="48.85" error="Insufficient funds" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+139
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent3">
+  <order sym="TESTSTOCK" amount="5" limit="39.76"/>
+</transactions>
+
+Server response:
+<results><status id="12041"><open shares="1.0" /></status></results>
 --------------------------------------------------
 
 --------------------------------------------------
@@ -2061,11 +1938,11 @@ Sent request:
 139
 <?xml version="1.0" encoding="UTF-8"?>
 <transactions id="concurrent4">
-  <order sym="TESTSTOCK" amount="2" limit="30.49"/>
+  <order sym="TESTSTOCK" amount="9" limit="33.40"/>
 </transactions>
 
 Server response:
-<results><error id="394">Permission denied: Cannot cancel order belonging to another account</error></results>
+<results><error id="52" error="Order not found" /></results>
 --------------------------------------------------
 
 --------------------------------------------------
@@ -2073,23 +1950,11 @@ Sent request:
 110
 <?xml version="1.0" encoding="UTF-8"?>
 <transactions id="concurrent1">
-  <cancel id="10979"/>
+  <cancel id="12069"/>
 </transactions>
 
 Server response:
-<results><error id="462" error="Permission denied: Order belongs to another account" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent5">
-  <order sym="TESTSTOCK" amount="18" limit="61.48"/>
-</transactions>
-
-Server response:
-<results><status id="10964"><executed shares="1.0" price="43.25" time="1743607151" /></status></results>
+<results><error id="12069">Order already fully executed or canceled</error></results>
 --------------------------------------------------
 
 --------------------------------------------------
@@ -2097,160 +1962,11 @@ Sent request:
 139
 <?xml version="1.0" encoding="UTF-8"?>
 <transactions id="concurrent5">
-  <order sym="TESTSTOCK" amount="8" limit="25.02"/>
+  <order sym="TESTSTOCK" amount="9" limit="42.61"/>
 </transactions>
 
 Server response:
-<results><status id="10965"><executed shares="1.0" price="43.25" time="1743607151" /></status></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-110
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent3">
-  <cancel id="10970"/>
-</transactions>
-
-Server response:
-<results><error id="10979">Order already fully executed or canceled</error></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent2">
-  <order sym="TESTSTOCK" amount="-1" limit="74.75"/>
-</transactions>
-
-Server response:
-<results><error id="10970">Order already fully executed or canceled</error></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-109
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent3">
-  <query id="10976"/>
-</transactions>
-
-Server response:
-<results><opened sym="TESTSTOCK" amount="-2" limit="36.50" id="10989" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent1">
-  <order sym="TESTSTOCK" amount="13" limit="30.53"/>
-</transactions>
-
-Server response:
-<results><canceled id="10977"><canceled shares="3.0" time="1743607152" /></canceled></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-110
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent3">
-  <cancel id="10976"/>
-</transactions>
-
-Server response:
-<results><status id="10976"><open shares="3.0" /></status></results>
---------------------------------------------------
-
-Thread 3 completed: success=10, errors=10, race_conditions=0
-Server response:
-<results><canceled id="10976"><canceled shares="3.0" time="1743607152" /></canceled></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent2">
-  <order sym="TESTSTOCK" amount="-4" limit="61.34"/>
-</transactions>
-
-Server response:
-<results><opened sym="TESTSTOCK" amount="2" limit="30.49" id="10990" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent5">
-  <order sym="TESTSTOCK" amount="18" limit="75.03"/>
-</transactions>
-
-Server response:
-<results><opened sym="TESTSTOCK" amount="-3" limit="79.38" id="10991" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent5">
-  <order sym="TESTSTOCK" amount="12" limit="65.25"/>
-</transactions>
-
-Server response:
-<results><error sym="TESTSTOCK" amount="18" limit="61.48" error="Insufficient funds" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent1">
-  <order sym="TESTSTOCK" amount="-5" limit="64.16"/>
-</transactions>
-
-Server response:
-<results><opened sym="TESTSTOCK" amount="1" limit="49.82" id="10992" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-109
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent3">
-  <query id="10992"/>
-</transactions>
-
-Server response:
-<results><error sym="TESTSTOCK" amount="8" limit="25.02" error="Insufficient funds" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-109
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent3">
-  <query id="10970"/>
-</transactions>
-
-Server response:
-<results><status id="10992"><executed shares="1.0" price="42.45" time="1743607152" /></status></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-109
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent3">
-  <query id="10992"/>
-</transactions>
-
-Server response:
-<results><status id="10970"><executed shares="1.0" price="43.25" time="1743607151" /></status></results>
+<results><opened sym="TESTSTOCK" amount="2" limit="15.66" id="12070" /></results>
 --------------------------------------------------
 
 --------------------------------------------------
@@ -2258,172 +1974,11 @@ Sent request:
 139
 <?xml version="1.0" encoding="UTF-8"?>
 <transactions id="concurrent5">
-  <order sym="TESTSTOCK" amount="9" limit="64.51"/>
+  <order sym="TESTSTOCK" amount="9" limit="44.56"/>
 </transactions>
 
 Server response:
-<results><status id="10992"><executed shares="1.0" price="42.45" time="1743607152" /></status></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent4">
-  <order sym="TESTSTOCK" amount="18" limit="65.71"/>
-</transactions>
-
-Server response:
-<results><opened sym="TESTSTOCK" amount="-1" limit="74.75" id="10993" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-110
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent5">
-  <cancel id="10985"/>
-</transactions>
-
-Server response:
-<results><error id="10985">Order already fully executed or canceled</error></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-108
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent1">
-  <cancel id="426"/>
-</transactions>
-
-Server response:
-<results><opened sym="TESTSTOCK" amount="13" limit="30.53" id="10994" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent3">
-  <order sym="TESTSTOCK" amount="-3" limit="77.18"/>
-</transactions>
-
-Server response:
-<results><error id="426">Permission denied: Cannot cancel order belonging to another account</error></results>
---------------------------------------------------
-
-Thread 1 completed: success=9, errors=11, race_conditions=0
-Server response:
-<results><opened sym="TESTSTOCK" amount="-4" limit="61.34" id="10995" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-110
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent4">
-  <cancel id="10962"/>
-</transactions>
-
-Server response:
-<results><error sym="TESTSTOCK" amount="18" limit="75.03" error="Insufficient funds" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-110
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent3">
-  <cancel id="10976"/>
-</transactions>
-
-Server response:
-<results><error id="10976">Order already fully executed or canceled</error></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-110
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent2">
-  <cancel id="10995"/>
-</transactions>
-
-Server response:
-<results><error id="10962">Order already fully executed or canceled</error></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-110
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent2">
-  <cancel id="10995"/>
-</transactions>
-
-Server response:
-<results><canceled id="10995"><canceled shares="4.0" time="1743607153" /></canceled></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-110
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent4">
-  <cancel id="10990"/>
-</transactions>
-
-Server response:
-<results><error id="10995">Order already fully executed or canceled</error></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent5">
-  <order sym="TESTSTOCK" amount="18" limit="62.06"/>
-</transactions>
-
-Server response:
-<results><opened sym="TESTSTOCK" amount="-5" limit="64.16" id="10996" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent4">
-  <order sym="TESTSTOCK" amount="16" limit="36.52"/>
-</transactions>
-
-Server response:
-<results><error sym="TESTSTOCK" amount="12" limit="65.25" error="Insufficient funds" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent1">
-  <order sym="TESTSTOCK" amount="-5" limit="48.75"/>
-</transactions>
-
-Server response:
-<results><error sym="TESTSTOCK" amount="18" limit="65.71" error="Insufficient funds" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent4">
-  <order sym="TESTSTOCK" amount="18" limit="59.68"/>
-</transactions>
-
-Server response:
-<results><error sym="TESTSTOCK" amount="9" limit="64.51" error="Insufficient funds" /></results>
+<results><opened sym="TESTSTOCK" amount="4" limit="14.22" id="12071" /></results>
 --------------------------------------------------
 
 --------------------------------------------------
@@ -2431,11 +1986,11 @@ Sent request:
 109
 <?xml version="1.0" encoding="UTF-8"?>
 <transactions id="concurrent5">
-  <query id="10961"/>
+  <query id="12062"/>
 </transactions>
 
 Server response:
-<results><status id="10961"><executed shares="1.0" price="50.0" time="1743607151" /><executed shares="1.0" price="50.0" time="1743607151" /><executed shares="1.0" price="50.0" time="1743607151" /></status></results>
+<results><error sym="TESTSTOCK" amount="5" limit="35.27" error="Insufficient funds" /></results>
 --------------------------------------------------
 
 --------------------------------------------------
@@ -2443,211 +1998,35 @@ Sent request:
 109
 <?xml version="1.0" encoding="UTF-8"?>
 <transactions id="concurrent4">
-  <query id="10990"/>
+  <query id="12052"/>
 </transactions>
 
 Server response:
-<results><canceled id="10990"><canceled shares="2.0" time="1743607153" /></canceled></results>
+<results><status id="12052"><executed shares="1.0" price="35.66" time="1743607691" /></status></results>
 --------------------------------------------------
 
 --------------------------------------------------
 Sent request:
-140
+109
 <?xml version="1.0" encoding="UTF-8"?>
 <transactions id="concurrent4">
-  <order sym="TESTSTOCK" amount="12" limit="29.24"/>
+  <query id="12058"/>
 </transactions>
 
 Server response:
-<results><status id="10990"><canceled shares="2.0" time="1743607153" /></status></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent2">
-  <order sym="TESTSTOCK" amount="18" limit="21.84"/>
-</transactions>
-
-Server response:
-<results><opened sym="TESTSTOCK" amount="-3" limit="77.18" id="10997" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent3">
-  <order sym="TESTSTOCK" amount="-3" limit="24.08"/>
-</transactions>
-
-Server response:
-<results><error sym="TESTSTOCK" amount="18" limit="62.06" error="Insufficient funds" /></results>
+<results><status id="12062"><executed shares="3.0" price="33.69" time="1743607692" /></status></results>
 --------------------------------------------------
 
 --------------------------------------------------
 Sent request:
 139
 <?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent1">
-  <order sym="TESTSTOCK" amount="2" limit="39.18"/>
-</transactions>
-
-Server response:
-<results><error sym="TESTSTOCK" amount="18" limit="59.68" error="Insufficient funds" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent5">
-  <order sym="TESTSTOCK" amount="18" limit="41.01"/>
-</transactions>
-
-Server response:
-<results><error sym="TESTSTOCK" amount="16" limit="36.52" error="Insufficient funds" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent1">
-  <order sym="TESTSTOCK" amount="-1" limit="23.12"/>
-</transactions>
-
-Server response:
-<results><opened sym="TESTSTOCK" amount="-5" limit="48.75" id="10998" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-109
-<?xml version="1.0" encoding="UTF-8"?>
 <transactions id="concurrent2">
-  <query id="10987"/>
+  <order sym="TESTSTOCK" amount="4" limit="11.22"/>
 </transactions>
 
 Server response:
-<results><status id="10987"><executed shares="3.0" price="43.47" time="1743607152" /><executed shares="1.0" price="42.22" time="1743607152" /><executed shares="1.0" price="41.75" time="1743607152" /></status></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent1">
-  <order sym="TESTSTOCK" amount="-2" limit="52.14"/>
-</transactions>
-
-Server response:
-<results><opened sym="TESTSTOCK" amount="12" limit="29.24" id="10999" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-108
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent5">
-  <cancel id="367"/>
-</transactions>
-
-Server response:
-<results><error id="367">Permission denied: Cannot cancel order belonging to another account</error></results>
---------------------------------------------------
-
-Thread 9 completed: success=9, errors=11, race_conditions=0
-Server response:
-<results><opened sym="TESTSTOCK" amount="18" limit="21.84" id="11000" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-109
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent5">
-  <query id="10961"/>
-</transactions>
-
-Server response:
-<results><status id="10961"><executed shares="1.0" price="50.0" time="1743607151" /><executed shares="1.0" price="50.0" time="1743607151" /><executed shares="1.0" price="50.0" time="1743607151" /></status></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-109
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent2">
-  <query id="10964"/>
-</transactions>
-
-Server response:
-<results><status id="10964"><executed shares="1.0" price="43.25" time="1743607151" /></status></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-110
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent1">
-  <cancel id="10967"/>
-</transactions>
-
-Server response:
-<results><opened sym="TESTSTOCK" amount="-3" limit="24.08" id="11001" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent2">
-  <order sym="TESTSTOCK" amount="-4" limit="32.84"/>
-</transactions>
-
-Server response:
-<results><opened sym="TESTSTOCK" amount="-1" limit="23.12" id="11002" /></results>
---------------------------------------------------
-
-Thread 5 completed: success=8, errors=12, race_conditions=0
-Server response:
-<results><canceled id="10967"><executed shares="2.0" price="47.73" time="1743607152" /><canceled shares="2.0" time="1743607153" /></canceled></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-110
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent5">
-  <cancel id="10985"/>
-</transactions>
-
-Server response:
-<results><error id="10985">Order already fully executed or canceled</error></results>
---------------------------------------------------
-
-Thread 0 completed: success=14, errors=6, race_conditions=0
-Server response:
-<results><error sym="TESTSTOCK" amount="18" limit="41.01" error="Insufficient funds" /></results>
---------------------------------------------------
-
---------------------------------------------------
-Sent request:
-140
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent1">
-  <order sym="TESTSTOCK" amount="14" limit="75.97"/>
-</transactions>
-
-Server response:
-<results><opened sym="TESTSTOCK" amount="2" limit="39.18" id="11003" /></results>
---------------------------------------------------
-
-Thread 6 completed: success=12, errors=8, race_conditions=0
-Server response:
-<results><opened sym="TESTSTOCK" amount="-2" limit="52.14" id="11004" /></results>
+<results><status id="12058"><executed shares="2.0" price="35.66" time="1743607692" /><executed shares="1.0" price="33.69" time="1743607692" /></status></results>
 --------------------------------------------------
 
 --------------------------------------------------
@@ -2655,33 +2034,47 @@ Sent request:
 140
 <?xml version="1.0" encoding="UTF-8"?>
 <transactions id="concurrent3">
-  <order sym="TESTSTOCK" amount="-1" limit="29.67"/>
+  <order sym="TESTSTOCK" amount="-3" limit="16.30"/>
 </transactions>
 
 Server response:
-<results><opened sym="TESTSTOCK" amount="-4" limit="32.84" id="11005" /></results>
+<results><opened sym="TESTSTOCK" amount="-2" limit="26.75" id="12072" /></results>
 --------------------------------------------------
 
 --------------------------------------------------
 Sent request:
 140
 <?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent2">
-  <order sym="TESTSTOCK" amount="-4" limit="72.45"/>
+<transactions id="concurrent1">
+  <order sym="TESTSTOCK" amount="-1" limit="36.82"/>
 </transactions>
 
 Server response:
-<results><error sym="TESTSTOCK" amount="14" limit="75.97" error="Insufficient funds" /></results>
+<results><opened sym="TESTSTOCK" amount="-2" limit="34.24" id="12073" /></results>
 --------------------------------------------------
 
-Thread 4 completed: success=6, errors=14, race_conditions=0
+--------------------------------------------------
+Sent request:
+109
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent3">
+  <query id="12042"/>
+</transactions>
+
 Server response:
-<results><opened sym="TESTSTOCK" amount="-1" limit="29.67" id="11006" /></results>
+<results><error sym="TESTSTOCK" amount="3" limit="37.08" error="Insufficient funds" /></results>
 --------------------------------------------------
 
-Thread 2 completed: success=12, errors=8, race_conditions=0
+--------------------------------------------------
+Sent request:
+140
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent1">
+  <order sym="TESTSTOCK" amount="-3" limit="42.90"/>
+</transactions>
+
 Server response:
-<results><opened sym="TESTSTOCK" amount="-4" limit="72.45" id="11007" /></results>
+<results><status id="12042"><open shares="1.0" /></status></results>
 --------------------------------------------------
 
 --------------------------------------------------
@@ -2689,11 +2082,93 @@ Sent request:
 139
 <?xml version="1.0" encoding="UTF-8"?>
 <transactions id="concurrent4">
-  <order sym="TESTSTOCK" amount="6" limit="22.68"/>
+  <order sym="TESTSTOCK" amount="8" limit="42.55"/>
 </transactions>
 
 Server response:
-<results><error sym="TESTSTOCK" amount="6" limit="22.68" error="Insufficient funds" /></results>
+<results><opened sym="TESTSTOCK" amount="-2" limit="20.56" id="12074" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+139
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent3">
+  <order sym="TESTSTOCK" amount="8" limit="30.10"/>
+</transactions>
+
+Server response:
+<results><error sym="TESTSTOCK" amount="9" limit="33.40" error="Insufficient funds" /></results>
+--------------------------------------------------
+
+Thread 2 completed: success=15, errors=5, race_conditions=0
+Server response:
+<results><error sym="TESTSTOCK" amount="5" limit="39.76" error="Insufficient funds" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+139
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent5">
+  <order sym="TESTSTOCK" amount="8" limit="40.80"/>
+</transactions>
+
+Server response:
+<results><error sym="TESTSTOCK" amount="9" limit="42.61" error="Insufficient funds" /></results>
+--------------------------------------------------
+
+Thread 0 completed: success=10, errors=10, race_conditions=0
+Server response:
+<results><error sym="TESTSTOCK" amount="9" limit="44.56" error="Insufficient funds" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+139
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent2">
+  <order sym="TESTSTOCK" amount="2" limit="29.13"/>
+</transactions>
+
+Server response:
+<results><opened sym="TESTSTOCK" amount="4" limit="11.22" id="12075" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+109
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent4">
+  <query id="12052"/>
+</transactions>
+
+Server response:
+<results><status id="12052"><executed shares="1.0" price="35.66" time="1743607691" /></status></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+110
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent4">
+  <cancel id="12043"/>
+</transactions>
+
+Server response:
+<results><error id="12043">Order already fully executed or canceled</error></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+106
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent3">
+  <cancel id="6"/>
+</transactions>
+
+Server response:
+<results><opened sym="TESTSTOCK" amount="-3" limit="16.30" id="12076" /></results>
 --------------------------------------------------
 
 --------------------------------------------------
@@ -2701,43 +2176,570 @@ Sent request:
 140
 <?xml version="1.0" encoding="UTF-8"?>
 <transactions id="concurrent4">
-  <order sym="TESTSTOCK" amount="16" limit="29.46"/>
+  <order sym="TESTSTOCK" amount="-1" limit="36.94"/>
 </transactions>
 
 Server response:
-<results><error sym="TESTSTOCK" amount="16" limit="29.46" error="Insufficient funds" /></results>
+<results><error id="6">Permission denied: Cannot cancel order belonging to another account</error></results>
 --------------------------------------------------
 
 --------------------------------------------------
 Sent request:
-108
+109
 <?xml version="1.0" encoding="UTF-8"?>
 <transactions id="concurrent3">
-  <cancel id="126"/>
+  <query id="12076"/>
 </transactions>
 
 Server response:
-<results><error id="126">Permission denied: Cannot cancel order belonging to another account</error></results>
+<results><status id="12076"><executed shares="3.0" price="33.69" time="1743607693" /></status></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+139
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent5">
+  <order sym="TESTSTOCK" amount="6" limit="29.98"/>
+</transactions>
+
+Server response:
+<results><opened sym="TESTSTOCK" amount="-1" limit="36.82" id="12077" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+139
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent2">
+  <order sym="TESTSTOCK" amount="9" limit="37.97"/>
+</transactions>
+
+Server response:
+<results><opened sym="TESTSTOCK" amount="-3" limit="42.90" id="12078" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+139
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent3">
+  <order sym="TESTSTOCK" amount="5" limit="42.44"/>
+</transactions>
+
+Server response:
+<results><error sym="TESTSTOCK" amount="8" limit="42.55" error="Insufficient funds" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+109
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent2">
+  <query id="12065"/>
+</transactions>
+
+Server response:
+<results><error sym="TESTSTOCK" amount="8" limit="40.80" error="Insufficient funds" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+110
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent2">
+  <cancel id="12036"/>
+</transactions>
+
+Server response:
+<results><opened sym="TESTSTOCK" amount="8" limit="30.10" id="12079" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+110
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent1">
+  <cancel id="12066"/>
+</transactions>
+
+Server response:
+<results><status id="12065"><executed shares="2.0" price="33.69" time="1743607692" /></status></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+109
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent3">
+  <query id="12042"/>
+</transactions>
+
+Server response:
+<results><error id="12036">Order already fully executed or canceled</error></results>
 --------------------------------------------------
 
 --------------------------------------------------
 Sent request:
 140
 <?xml version="1.0" encoding="UTF-8"?>
-<transactions id="concurrent1">
-  <order sym="TESTSTOCK" amount="-4" limit="46.56"/>
+<transactions id="concurrent5">
+  <order sym="TESTSTOCK" amount="-1" limit="43.99"/>
 </transactions>
 
 Server response:
-<results><opened sym="TESTSTOCK" amount="-4" limit="46.56" id="11008" /></results>
+<results><status id="12042"><open shares="1.0" /></status></results>
 --------------------------------------------------
 
-Thread 8 completed: success=11, errors=9, race_conditions=0
+--------------------------------------------------
+Sent request:
+110
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent1">
+  <cancel id="12037"/>
+</transactions>
+
+Server response:
+<results><canceled id="12066"><canceled shares="10.0" time="1743607693" /></canceled></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+139
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent3">
+  <order sym="TESTSTOCK" amount="3" limit="14.16"/>
+</transactions>
+
+Server response:
+<results><error id="12037">Order already fully executed or canceled</error></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+110
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent3">
+  <cancel id="12073"/>
+</transactions>
+
+Server response:
+<results><canceled id="12073"><canceled shares="2.0" time="1743607693" /></canceled></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+140
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent4">
+  <order sym="TESTSTOCK" amount="-2" limit="23.16"/>
+</transactions>
+
+Server response:
+<results><opened sym="TESTSTOCK" amount="2" limit="29.13" id="12080" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+110
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent5">
+  <cancel id="12057"/>
+</transactions>
+
+Server response:
+<results><error id="12057">Order already fully executed or canceled</error></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+139
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent1">
+  <order sym="TESTSTOCK" amount="1" limit="15.36"/>
+</transactions>
+
+Server response:
+<results><opened sym="TESTSTOCK" amount="-1" limit="36.94" id="12081" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+109
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent4">
+  <query id="12052"/>
+</transactions>
+
+Server response:
+<results><status id="12052"><executed shares="1.0" price="35.66" time="1743607691" /></status></results>
+--------------------------------------------------
+
+Thread 6 completed: success=16, errors=4, race_conditions=0
+Server response:
+<results><opened sym="TESTSTOCK" amount="6" limit="29.98" id="12082" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+105
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent2">
+  <query id="4"/>
+</transactions>
+
+Server response:
+<results><error sym="TESTSTOCK" amount="9" limit="37.97" error="Insufficient funds" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+140
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent5">
+  <order sym="TESTSTOCK" amount="-2" limit="27.49"/>
+</transactions>
+
+Server response:
+<results><error sym="TESTSTOCK" amount="5" limit="42.44" error="Insufficient funds" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+109
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent1">
+  <query id="12078"/>
+</transactions>
+
+Server response:
+<results><error id="4" error="Permission denied: Order belongs to another account" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+139
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent5">
+  <order sym="TESTSTOCK" amount="5" limit="47.46"/>
+</transactions>
+
+Server response:
+<results><status id="12078"><open shares="3.0" /></status></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+140
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent2">
+  <order sym="TESTSTOCK" amount="10" limit="35.74"/>
+</transactions>
+
+Server response:
+<results><opened sym="TESTSTOCK" amount="-1" limit="43.99" id="12083" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+106
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent5">
+  <query id="57"/>
+</transactions>
+
+Server response:
+<results><error sym="TESTSTOCK" amount="3" limit="14.16" error="Insufficient funds" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+139
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent5">
+  <order sym="TESTSTOCK" amount="1" limit="21.01"/>
+</transactions>
+
+Server response:
+<results><error id="57" error="Order not found" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+109
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent1">
+  <query id="12068"/>
+</transactions>
+
+Server response:
+<results><status id="12068"><open shares="3.0" /></status></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+139
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent5">
+  <order sym="TESTSTOCK" amount="5" limit="29.69"/>
+</transactions>
+
+Server response:
+<results><opened sym="TESTSTOCK" amount="-2" limit="23.16" id="12084" /></results>
+--------------------------------------------------
+
+Thread 9 completed: success=14, errors=6, race_conditions=0
+Server response:
+<results><opened sym="TESTSTOCK" amount="1" limit="15.36" id="12085" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+109
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent4">
+  <query id="12043"/>
+</transactions>
+
+Server response:
+<results><status id="12043"><executed shares="2.0" price="37.91" time="1743607691" /><executed shares="1.0" price="39.32" time="1743607691" /></status></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+139
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent3">
+  <order sym="TESTSTOCK" amount="1" limit="18.25"/>
+</transactions>
+
+Server response:
+<results><opened sym="TESTSTOCK" amount="-2" limit="27.49" id="12086" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+109
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent3">
+  <query id="12042"/>
+</transactions>
+
+Server response:
+<results><error sym="TESTSTOCK" amount="5" limit="47.46" error="Insufficient funds" /></results>
+--------------------------------------------------
+
+Thread 1 completed: success=12, errors=8, race_conditions=0
+Server response:
+<results><error sym="TESTSTOCK" amount="10" limit="35.74" error="Insufficient funds" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+139
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent2">
+  <order sym="TESTSTOCK" amount="3" limit="32.79"/>
+</transactions>
+
+Server response:
+<results><status id="12042"><open shares="1.0" /></status></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+109
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent2">
+  <query id="12055"/>
+</transactions>
+
+Server response:
+<results><status id="12055"><open shares="5.0" /></status></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+140
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent3">
+  <order sym="TESTSTOCK" amount="-1" limit="38.53"/>
+</transactions>
+
+Server response:
+<results><opened sym="TESTSTOCK" amount="1" limit="21.01" id="12087" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+140
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent5">
+  <order sym="TESTSTOCK" amount="-3" limit="39.81"/>
+</transactions>
+
+Server response:
+<results><error sym="TESTSTOCK" amount="5" limit="29.69" error="Insufficient funds" /></results>
+--------------------------------------------------
+
+Thread 8 completed: success=10, errors=10, race_conditions=0
+Server response:
+<results><error sym="TESTSTOCK" amount="1" limit="18.25" error="Insufficient funds" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+139
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent2">
+  <order sym="TESTSTOCK" amount="4" limit="27.10"/>
+</transactions>
+
+Server response:
+<results><error sym="TESTSTOCK" amount="3" limit="32.79" error="Insufficient funds" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+110
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent2">
+  <cancel id="12039"/>
+</transactions>
+
+Server response:
+<results><error id="12039">Order already fully executed or canceled</error></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+139
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent1">
+  <order sym="TESTSTOCK" amount="3" limit="41.88"/>
+</transactions>
+
+Server response:
+<results><opened sym="TESTSTOCK" amount="-1" limit="38.53" id="12088" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+109
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent3">
+  <query id="12048"/>
+</transactions>
+
+Server response:
+<results><error sym="TESTSTOCK" amount="4" limit="27.10" error="Insufficient funds" /></results>
+--------------------------------------------------
+
+Thread 4 completed: success=8, errors=12, race_conditions=0
+Server response:
+<results><status id="12048"><open shares="4.0" /></status></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+109
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent2">
+  <query id="12045"/>
+</transactions>
+
+Server response:
+<results><status id="12045"><executed shares="1.0" price="35.66" time="1743607691" /><executed shares="2.0" price="35.66" time="1743607692" /></status></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+109
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent1">
+  <query id="12050"/>
+</transactions>
+
+Server response:
+<results><status id="12050"><open shares="2.0" /></status></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+109
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent3">
+  <query id="12048"/>
+</transactions>
+
+Server response:
+<results><opened sym="TESTSTOCK" amount="-3" limit="39.81" id="12089" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+109
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent4">
+  <query id="12084"/>
+</transactions>
+
+Server response:
+<results><status id="12048"><open shares="4.0" /></status></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+109
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent1">
+  <query id="12070"/>
+</transactions>
+
+Server response:
+<results><status id="12084"><executed shares="2.0" price="33.69" time="1743607693" /></status></results>
+--------------------------------------------------
+
+Thread 7 completed: success=17, errors=3, race_conditions=0
+Server response:
+<results><status id="12070"><open shares="2.0" /></status></results>
+--------------------------------------------------
+
+Thread 5 completed: success=17, errors=3, race_conditions=0
+Server response:
+<results><opened sym="TESTSTOCK" amount="3" limit="41.88" id="12090" /></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+109
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent1">
+  <query id="12090"/>
+</transactions>
+
+Server response:
+<results><status id="12090"><executed shares="1.0" price="36.82" time="1743607693" /><executed shares="1.0" price="36.94" time="1743607694" /><executed shares="1.0" price="37.05" time="1743607694" /></status></results>
+--------------------------------------------------
+
+--------------------------------------------------
+Sent request:
+140
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions id="concurrent4">
+  <order sym="TESTSTOCK" amount="-3" limit="31.60"/>
+</transactions>
+
+Server response:
+<results><opened sym="TESTSTOCK" amount="-3" limit="31.60" id="12091" /></results>
+--------------------------------------------------
+
+Thread 3 completed: success=12, errors=8, race_conditions=0
 
 =================== CONCURRENCY TEST RESULTS ===================
 Total operations: 200
-Successful operations: 99 (49.50%)
-Error operations: 101
+Successful operations: 131 (65.50%)
+Error operations: 69
 Race conditions: 0
 =================================================
 Concurrency test completed
@@ -2747,35 +2749,35 @@ System has 2 available cores, will test the following configurations: [1, 2]
 Setting server to use 1 cores...
   - Running iteration 1/3 with 1 cores...
     Starting throughput measurement with 100 requests...
-    Completed in 3.82 seconds
-  - Completed iteration 1: 26.18 req/sec
+    Completed in 5.11 seconds
+  - Completed iteration 1: 19.56 req/sec
   - Running iteration 2/3 with 1 cores...
     Starting throughput measurement with 100 requests...
-    Completed in 5.14 seconds
-  - Completed iteration 2: 19.44 req/sec
+    Completed in 3.77 seconds
+  - Completed iteration 2: 26.51 req/sec
   - Running iteration 3/3 with 1 cores...
     Starting throughput measurement with 100 requests...
-    Completed in 3.62 seconds
-  - Completed iteration 3: 27.61 req/sec
-Completed testing with 1 cores. Avg throughput: 24.41 req/sec
+    Completed in 4.38 seconds
+  - Completed iteration 3: 22.86 req/sec
+Completed testing with 1 cores. Avg throughput: 22.97 req/sec
 Setting server to use 2 cores...
   - Running iteration 1/3 with 2 cores...
     Starting throughput measurement with 100 requests...
-    Completed in 4.33 seconds
-  - Completed iteration 1: 23.11 req/sec
+    Completed in 3.80 seconds
+  - Completed iteration 1: 26.32 req/sec
   - Running iteration 2/3 with 2 cores...
     Starting throughput measurement with 100 requests...
-    Completed in 3.32 seconds
-  - Completed iteration 2: 30.12 req/sec
+    Completed in 4.82 seconds
+  - Completed iteration 2: 20.76 req/sec
   - Running iteration 3/3 with 2 cores...
     Starting throughput measurement with 100 requests...
-    Completed in 3.87 seconds
-  - Completed iteration 3: 25.84 req/sec
-Completed testing with 2 cores. Avg throughput: 26.36 req/sec
+    Completed in 3.65 seconds
+  - Completed iteration 3: 27.42 req/sec
+Completed testing with 2 cores. Avg throughput: 24.83 req/sec
 Performance graph generated successfully
 Test results:
-  1 cores: 24.41 req/sec (±4.36)
-  2 cores: 26.36 req/sec (±3.54)
+  1 cores: 22.97 req/sec (±3.47)
+  2 cores: 24.83 req/sec (±3.57)
 
 Using external server - no shutdown required
 

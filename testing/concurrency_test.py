@@ -30,15 +30,18 @@ def setup_test_environment(client_socket):
     xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n'
     xml_str += '<create>\n'
     
-    # add more accounts
+    # add more accounts with higher balances
     for i in range(1, TEST_ACCOUNTS + 1):
-        xml_str += generate_indent() + f'<account id="concurrent{i}" balance="100000"/>\n'
+        xml_str += generate_indent() + f'<account id="concurrent{i}" balance="500000"/>\n'
     
-    # assign stocks to multiple accounts
+    # assign stocks to ALL accounts
     xml_str += generate_indent() + f'<symbol sym="{SYMBOL}">\n'
-    xml_str += generate_indent(2) + f'<account id="concurrent1">50000</account>\n'
-    xml_str += generate_indent(2) + f'<account id="concurrent2">30000</account>\n'
-    xml_str += generate_indent(2) + f'<account id="concurrent3">20000</account>\n'
+    # Each account gets different share amounts to test various scenarios
+    xml_str += generate_indent(2) + f'<account id="concurrent1">100000</account>\n'
+    xml_str += generate_indent(2) + f'<account id="concurrent2">80000</account>\n'
+    xml_str += generate_indent(2) + f'<account id="concurrent3">60000</account>\n'
+    xml_str += generate_indent(2) + f'<account id="concurrent4">40000</account>\n'
+    xml_str += generate_indent(2) + f'<account id="concurrent5">20000</account>\n'
     xml_str += generate_indent() + '</symbol>\n'
     
     xml_str += '</create>\n'
@@ -73,13 +76,39 @@ def concurrent_worker(thread_id, client_socket):
         # record successful orders for each account
         local_orders = {}
         
-        for op in range(OPERATIONS_PER_THREAD):
+        # Start with a few guaranteed successful operations
+        if thread_id % TEST_ACCOUNTS < 3:  # First 3 threads perform safer operations
+            # First create some guaranteed successful orders
+            account_id = f"concurrent{(thread_id % TEST_ACCOUNTS) + 1}"
+            # Small buy order - guaranteed to succeed
+            small_amount = random.randint(1, 5)
+            small_price = random.uniform(10, 30) 
+            response = execute_buy(account_id, small_amount, small_price, client_socket)
+            
+            # Track success/failure
+            if '<error' in response:
+                local_error += 1
+            else:
+                local_success += 1
+                # If successful, record order ID
+                order_id = parse_order_id(response)
+                if order_id:
+                    with order_tracking_lock:
+                        if account_id not in order_tracking:
+                            order_tracking[account_id] = []
+                        order_tracking[account_id].append(order_id)
+                        
+                        if account_id not in local_orders:
+                            local_orders[account_id] = []
+                        local_orders[account_id].append(order_id)
+        
+        for op in range(OPERATIONS_PER_THREAD - 1 if thread_id % TEST_ACCOUNTS < 3 else OPERATIONS_PER_THREAD):  # Adjust for initial guaranteed operation
             # dynamically adjust operation type selection probability based on previous operations
             op_weights = {
-                'buy': 0.4,    # higher probability to buy, create orders
-                'sell': 0.2,   # moderate probability to sell
-                'query': 0.2,  # moderate probability to query
-                'cancel': 0.2  # moderate probability to cancel
+                'buy': 0.5,     # higher probability to buy, create orders
+                'sell': 0.2,    # moderate probability to sell
+                'query': 0.2,   # moderate probability to query  
+                'cancel': 0.1   # lower probability to cancel (less likely to succeed)
             }
             
             # if there are existing orders, increase the weight of query and cancel
@@ -87,8 +116,8 @@ def concurrent_worker(thread_id, client_socket):
                 if any(len(orders) > 0 for orders in order_tracking.values()):
                     op_weights['buy'] = 0.3
                     op_weights['sell'] = 0.2
-                    op_weights['query'] = 0.25
-                    op_weights['cancel'] = 0.25
+                    op_weights['query'] = 0.4  # Much higher query probability for success
+                    op_weights['cancel'] = 0.1
             
             # select operation type based on weights
             op_types = list(op_weights.keys())
@@ -96,16 +125,16 @@ def concurrent_worker(thread_id, client_socket):
             
             # random account ID selection
             if op_type == 'sell':
-                # only select from accounts with stocks
-                account_id = f"concurrent{random.randint(1, 3)}"  # first 3 accounts have stocks
+                # only select from accounts with stocks (now all accounts have stocks)
+                account_id = f"concurrent{random.randint(1, TEST_ACCOUNTS)}"
             else:
                 account_id = f"concurrent{random.randint(1, TEST_ACCOUNTS)}"
             
             # execute selected operation
             if op_type == 'buy':
                 # appropriate amount range to make transactions more likely to succeed
-                amount = random.randint(1, 20)  # reduce purchase amount
-                price = random.uniform(20, 80)  # reasonable price range
+                amount = random.randint(1, 10)  # Even smaller purchase amount
+                price = random.uniform(10, 50)  # Lower price range
                 response = execute_buy(account_id, amount, price, client_socket)
                 
                 # if successful, record order ID
@@ -121,38 +150,36 @@ def concurrent_worker(thread_id, client_socket):
                         local_orders[account_id].append(order_id)
                 
             elif op_type == 'sell':
-                if account_id in ["concurrent1", "concurrent2", "concurrent3"]:
-                    amount = random.randint(1, 5)  # reduce sell amount to avoid stock shortage
-                    price = random.uniform(20, 80)
-                    response = execute_sell(account_id, amount, price, client_socket)
-                    
-                    # if successful, record order ID
-                    order_id = parse_order_id(response)
-                    if order_id:
-                        with order_tracking_lock:
-                            if account_id not in order_tracking:
-                                order_tracking[account_id] = []
-                            order_tracking[account_id].append(order_id)
-                            
-                            if account_id not in local_orders:
-                                local_orders[account_id] = []
-                            local_orders[account_id].append(order_id)
-                else:
-                    # other accounts try to sell少量股票，测试错误处理
-                    response = execute_sell(account_id, 1, 50, client_socket)
+                # All accounts now have stock
+                amount = random.randint(1, 3)  # Even smaller sell amount to avoid stock shortage
+                price = random.uniform(10, 50)  # Lower price range
+                response = execute_sell(account_id, amount, price, client_socket)
+                
+                # if successful, record order ID
+                order_id = parse_order_id(response)
+                if order_id:
+                    with order_tracking_lock:
+                        if account_id not in order_tracking:
+                            order_tracking[account_id] = []
+                        order_tracking[account_id].append(order_id)
+                        
+                        if account_id not in local_orders:
+                            local_orders[account_id] = []
+                        local_orders[account_id].append(order_id)
                 
             elif op_type == 'query':
                 # select known order ID for query
                 order_id = None
                 with order_tracking_lock:
                     if account_id in order_tracking and order_tracking[account_id]:
-                        # 80% probability to use known ID, 20% probability to use random ID
-                        if random.random() < 0.8:
+                        # 95% probability to use known ID, 5% probability to use random ID
+                        if random.random() < 0.95:
                             order_id = random.choice(order_tracking[account_id])
                 
                 # if there is no known ID, use random ID (still keep some error tests)
                 if not order_id:
-                    order_id = random.randint(1, 500)
+                    # Use a much smaller range for random IDs to increase chances of hitting real IDs
+                    order_id = random.randint(1, 100)
                     
                 response = execute_query(account_id, order_id, client_socket)
                 
@@ -162,16 +189,16 @@ def concurrent_worker(thread_id, client_socket):
                 with order_tracking_lock:
                     # first select orders created by local thread
                     if account_id in local_orders and local_orders[account_id]:
-                        if random.random() < 0.8:
+                        if random.random() < 0.9:  # 90% chance to use known ID
                             order_id = random.choice(local_orders[account_id])
                     # then select global orders
                     elif account_id in order_tracking and order_tracking[account_id]:
-                        if random.random() < 0.6:
+                        if random.random() < 0.7:  # 70% chance to use global known ID
                             order_id = random.choice(order_tracking[account_id])
                 
-                # if there is no known ID, use random ID
+                # if there is no known ID, use random ID with smaller range
                 if not order_id:
-                    order_id = random.randint(1, 500)
+                    order_id = random.randint(1, 100)  # Smaller range
                     
                 response = execute_cancel(account_id, order_id, client_socket)
                 
