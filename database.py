@@ -15,7 +15,16 @@ class Database:
     def __init__(self, db_url="postgresql://username:password@localhost/exchange"):
         """initialize the database connection"""
         self.db_url = db_url
-        self.engine = init_db(self.db_url)
+        # Configure the SQLAlchemy engine with optimized connection pool settings
+        self.engine = create_engine(
+            self.db_url,
+            pool_size=20,               # Maximum number of connections to keep open
+            max_overflow=30,            # Maximum number of connections to create above pool_size
+            pool_timeout=30,            # Seconds to wait before giving up on getting a connection
+            pool_recycle=1800,          # Recycle connections after 30 minutes
+            echo_pool=True              # Log pool events for debugging
+        )
+        # Create a scoped session factory
         self.Session = scoped_session(sessionmaker(bind=self.engine))
         self.logger = logging.getLogger(__name__)
 

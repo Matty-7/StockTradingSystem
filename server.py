@@ -6,12 +6,26 @@ from xml_handler import XMLHandler
 from matching_engine import MatchingEngine
 import os
 import logging
+import queue
+import time
+from concurrent.futures import ThreadPoolExecutor
 
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     handlers=[logging.StreamHandler()])
 logger = logging.getLogger(__name__)
 
+# Configure number of worker threads based on CPU cores
+NUM_WORKERS = os.cpu_count() or 4  # Default to 4 if cpu_count is None
+if 'CPU_CORES' in os.environ:
+    try:
+        NUM_WORKERS = int(os.environ['CPU_CORES'])
+    except ValueError:
+        pass  # Use the default if the environment variable is not a valid integer
+
+logger.info(f"Configuring server with {NUM_WORKERS} worker threads")
+
+# Shared database connection pool
 db_url = os.environ.get('DATABASE_URL', 'postgresql://username:password@localhost/exchange')
 logger.info(f"Database URL: {db_url}")
 database = Database(db_url)
@@ -107,6 +121,17 @@ def handle_client(client_socket, address):
         logger.info(f"Closing connection for client {address}")
         client_socket.close()  # Ensure socket is closed
 
+def worker_thread(task_queue):
+    """Worker thread to process client connections from the queue"""
+    while True:
+        client_socket, address = task_queue.get()
+        try:
+            logger.info(f"Worker handling client {address}")
+            handle_client(client_socket, address)
+        except Exception as e:
+            logger.exception(f"Worker exception handling client {address}: {e}")
+        finally:
+            task_queue.task_done()
 
 def main():
     # Create server socket
@@ -117,23 +142,31 @@ def main():
     server.bind(('0.0.0.0', 12345))
 
     # Start listening
-    server.listen(5)
-    print("Exchange server started, listening on port 12345...")
+    server.listen(100)  # Increased backlog for high-load scenarios
+    print(f"Exchange server started on port 12345 with {NUM_WORKERS} worker threads...")
 
-    try:
-        while True:
-            # Accept client connection
-            client, address = server.accept()
-            print(f"Accepted connection from {address}")
-
-            # Create a new thread for each client
-            client_handler = threading.Thread(target=handle_client, args=(client, address))
-            client_handler.daemon = True
-            client_handler.start()
-    except KeyboardInterrupt:
-        print("Server shutting down")
-    finally:
-        server.close()
+    # Create a task queue for worker threads
+    task_queue = queue.Queue()
+    
+    # Start worker pool with ThreadPoolExecutor - easier management and better thread reuse
+    with ThreadPoolExecutor(max_workers=NUM_WORKERS) as executor:
+        # Submit worker function to executor
+        for _ in range(NUM_WORKERS):
+            executor.submit(worker_thread, task_queue)
+        
+        try:
+            while True:
+                # Accept client connection and add to queue
+                client, address = server.accept()
+                logger.info(f"Accepted connection from {address}, queuing for processing")
+                task_queue.put((client, address))
+        except KeyboardInterrupt:
+            logger.info("Server shutting down (KeyboardInterrupt)")
+        finally:
+            logger.info("Waiting for all tasks to complete...")
+            task_queue.join()  # Wait for all tasks to be processed
+            server.close()
+            logger.info("Server shutdown complete")
 
 if __name__ == "__main__":
     main()

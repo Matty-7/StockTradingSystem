@@ -5,6 +5,7 @@ import logging
 import re
 from model import Account, Position, Order, Execution
 import threading
+import traceback
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -114,198 +115,216 @@ class XMLHandler:
             logger.info(f"Processing transaction {i+1}: {elem_name} with attributes {attrs}")
 
             if elem_name == 'order':
-                sym = attrs.get('sym')
-                amount_str = attrs.get('amount')
-                limit_str = attrs.get('limit')
-
-                # Check for missing required attributes
-                if sym is None or amount_str is None or limit_str is None:
-                    error_text = "Order tag missing required attributes (sym, amount, or limit)"
-                    logger.warning(f"{error_text} in request for account {account_id}")
-                    err_attrs = {k: v for k, v in attrs.items() if v is not None} # Include present attributes
-                    err_attrs['error'] = error_text
-                    results_root.append(ET.Element('error', err_attrs))
-                    continue
-
-                try:
-                    amount_val = float(amount_str)
-                    limit_val = float(limit_str)
-                except ValueError:
-                    error_text = "Invalid numeric value for amount or limit"
-                    logger.warning(f"{error_text} (amount='{amount_str}', limit='{limit_str}') for account {account_id}")
-                    err_attrs = attrs.copy()
-                    err_attrs['error'] = error_text
-                    results_root.append(ET.Element('error', err_attrs))
-                    continue
-
-                # Call matching engine
-                try:
-                    success, error_msg, order_id = self.matching_engine.place_order(account_id, sym, amount_val, limit_val)
-                    if success:
-                        logger.info(f"Order placed successfully for account {account_id}, sym {sym}. Order ID: {order_id}")
-                        results_root.append(ET.Element('opened', {
-                            'sym': sym,
-                            'amount': amount_str,
-                            'limit': limit_str,
-                            'id': str(order_id)
-                        }))
-                    else:
-                        logger.warning(f"Order placement failed for account {account_id}, sym {sym}: {error_msg}")
-                        results_root.append(ET.Element('error', {
-                            'sym': sym,
-                            'amount': amount_str,
-                            'limit': limit_str,
-                            'error': str(error_msg) # Include specific error from engine
-                        }))
-                except Exception as e:
-                    logger.exception(f"Unexpected error during place_order call for account {account_id}")
-                    results_root.append(ET.Element('error', {
-                        'sym': sym,
-                        'amount': amount_str,
-                        'limit': limit_str,
-                        'error': f'Internal server error during order processing: {e}'
-                    }))
-
+                # Split order processing into a separate method
+                self._process_order(child, account_id, results_root)
             elif elem_name == 'query':
-                trans_id = attrs.get('id')
-                if not trans_id:
-                    logger.warning(f"Query tag missing id attribute for account {account_id}")
-                    results_root.append(ET.Element('error', {'error': "Query tag missing id attribute"}))
-                    continue
-                try:
-                    order_id = int(trans_id)
-                    logger.info(f"Querying status for order ID: {order_id} (Account: {account_id})")
-
-                    status_element = None
-                    error_element = None
-
-                    # Use a session scope for all database operations
-                    with self.database.session_scope() as session:
-                        # First, check if the order exists and belongs to the user
-                        order_check = session.query(Order).filter_by(id=order_id).first()
-
-                        if not order_check:
-                            logger.warning(f"Query failed: Order ID {order_id} not found (Account: {account_id})")
-                            error_element = ET.Element('error', {'id': trans_id, 'error': "Order not found"})
-                        # Check if the order belongs to the requesting account
-                        elif order_check.account_id != account_id:
-                            logger.warning(f"Account {account_id} attempted to query order {order_id} belonging to account {order_check.account_id}")
-                            error_element = ET.Element('error', {'id': trans_id, 'error': "Permission denied: Order belongs to another account"})
-                        else:
-                            # Order exists and permission granted, now get the detailed status
-                            try:
-                                # Capture ALL data needed from the order within the session
-                                order_id = order_check.id
-                                order_account_id = order_check.account_id
-                                order_symbol = order_check.symbol_name
-                                order_amount = order_check.amount
-                                order_limit_price = float(order_check.limit_price)
-                                order_created_at = order_check.created_at.isoformat() if order_check.created_at else None
-                                order_open_shares = order_check.open_shares
-                                order_is_canceled = order_check.canceled_at is not None
-                                order_canceled_at = order_check.canceled_at.isoformat() if order_check.canceled_at else None
-
-                                # Get all executions for this order
-                                executions = session.query(Execution).filter_by(order_id=order_id).all()
-
-                                # Capture execution data within the session
-                                execution_data = []
-                                total_executed_shares = 0
-                                for execution in executions:
-                                    exec_info = {
-                                        "shares": execution.shares,
-                                        "price": float(execution.price),
-                                        "time": execution.executed_at.isoformat() if execution.executed_at else None,
-                                        "timestamp": int(execution.executed_at.timestamp()) if execution.executed_at else int(time.time())
-                                    }
-                                    execution_data.append(exec_info)
-                                    total_executed_shares += execution.shares
-
-                                # Calculate avg price if needed
-                                avg_executed_price = None
-                                if total_executed_shares > 0:
-                                    avg_executed_price = sum(e["shares"] * e["price"] for e in execution_data) / total_executed_shares
-
-                                # Create the status element
-                                status_element = ET.Element('status', {'id': trans_id})
-
-                                # Add open status if applicable
-                                if order_open_shares != 0 and not order_is_canceled:
-                                    open_elem = ET.Element('open', {'shares': str(abs(order_open_shares))})
-                                    status_element.append(open_elem)
-
-                                # Add executions
-                                for execution in execution_data:
-                                    exec_elem = ET.Element('executed', {
-                                        'shares': str(execution["shares"]),
-                                        'price': str(execution["price"]),
-                                        'time': str(execution["timestamp"])
-                                    })
-                                    status_element.append(exec_elem)
-
-                                # Add canceled status if applicable
-                                if order_is_canceled and order_canceled_at:
-                                    # Calculate canceled shares
-                                    canceled_shares = abs(order_amount) - total_executed_shares
-                                    canceled_shares = max(0, canceled_shares)  # Ensure non-negative
-
-                                    cancel_time = int(datetime.datetime.fromisoformat(order_canceled_at).timestamp())
-                                    canceled_elem = ET.Element('canceled', {
-                                        'shares': str(canceled_shares),
-                                        'time': str(cancel_time)
-                                    })
-                                    status_element.append(canceled_elem)
-
-                                logger.info(f"Successfully retrieved status for order {order_id}")
-
-                            except Exception as e:
-                                logger.exception(f"Error processing order details for {order_id}: {str(e)}")
-                                error_element = ET.Element('error', {'id': trans_id, 'error': f"Error processing order details: {str(e)}"})
-
-                    # After session is closed, add either the status or error element
-                    if error_element is not None:
-                        results_root.append(error_element)
-                    elif status_element is not None:
-                        results_root.append(status_element)
-                    else:
-                        # This should not happen, but just in case
-                        results_root.append(ET.Element('error', {'id': trans_id, 'error': "Unknown error occurred"}))
-
-                except ValueError:
-                    logger.warning(f"Invalid transaction ID format '{trans_id}' in query for account {account_id}")
-                    results_root.append(ET.Element('error', {'id': trans_id, 'error': "Invalid transaction ID format"}))
-                except Exception as e:
-                    logger.exception(f"Error processing query for order ID '{trans_id}' (Account: {account_id})")
-                    results_root.append(ET.Element('error', {'id': trans_id, 'error': f'Internal server error during query: {e}'}))
-
+                # Split query processing into a separate method
+                self._process_query(child, account_id, results_root)
             elif elem_name == 'cancel':
-                trans_id = attrs.get('id')
-                if not trans_id:
-                    logger.warning(f"Cancel tag missing id attribute for account {account_id}")
-                    results_root.append(ET.Element('error', {'error': "Cancel tag missing id attribute"}))
-                    continue
-
-                # Check permission before calling handle_cancel
-                try:
-                    order_id_int = int(trans_id)
-                    # Call handle_cancel with the account ID
-                    logger.info(f"Attempting to cancel order ID: {trans_id} (Account: {account_id})")
-                    self.handle_cancel(trans_id, results_root, account_id)
-
-                except ValueError:
-                    logger.warning(f"Invalid transaction ID format '{trans_id}' in cancel for account {account_id}")
-                    results_root.append(ET.Element('error', {'id': trans_id, 'error': "Invalid transaction ID format"}))
-                except Exception as e:
-                     logger.exception(f"Error checking permission for cancel order ID '{trans_id}' (Account: {account_id})")
-                     results_root.append(ET.Element('error', {'id': trans_id, 'error': f'Internal server error during cancel pre-check: {e}'}))
-
+                # Split cancel processing into a separate method
+                self._process_cancel(child, account_id, results_root)
             else:
-                 logger.warning(f"Unknown transaction type '{elem_name}' in request for account {account_id}")
-                 results_root.append(ET.Element('error', {'type': elem_name, 'error': f"Unknown transaction type: {elem_name}"}))
+                logger.warning(f"Unknown transaction type '{elem_name}' in request for account {account_id}")
+                results_root.append(ET.Element('error', {'type': elem_name, 'error': f"Unknown transaction type: {elem_name}"}))
 
         response_str = ET.tostring(results_root, encoding='utf-8').decode('utf-8')
         logger.debug(f"Sending response for account {account_id}: {response_str[:500]}...")
         return response_str
+        
+    def _process_order(self, order_elem, account_id, results_root):
+        """Process an order transaction"""
+        attrs = order_elem.attrib
+        sym = attrs.get('sym')
+        amount_str = attrs.get('amount')
+        limit_str = attrs.get('limit')
+
+        # Check for missing required attributes
+        if sym is None or amount_str is None or limit_str is None:
+            error_text = "Order tag missing required attributes (sym, amount, or limit)"
+            logger.warning(f"{error_text} in request for account {account_id}")
+            err_attrs = {k: v for k, v in attrs.items() if v is not None} # Include present attributes
+            err_attrs['error'] = error_text
+            results_root.append(ET.Element('error', err_attrs))
+            return
+
+        try:
+            amount_val = float(amount_str)
+            limit_val = float(limit_str)
+        except ValueError:
+            error_text = "Invalid numeric value for amount or limit"
+            logger.warning(f"{error_text} (amount='{amount_str}', limit='{limit_str}') for account {account_id}")
+            err_attrs = attrs.copy()
+            err_attrs['error'] = error_text
+            results_root.append(ET.Element('error', err_attrs))
+            return
+
+        # Call matching engine
+        try:
+            success, error_msg, order_id = self.matching_engine.place_order(account_id, sym, amount_val, limit_val)
+            if success:
+                logger.info(f"Order placed successfully for account {account_id}, sym {sym}. Order ID: {order_id}")
+                results_root.append(ET.Element('opened', {
+                    'sym': sym,
+                    'amount': amount_str,
+                    'limit': limit_str,
+                    'id': str(order_id)
+                }))
+            else:
+                logger.warning(f"Order placement failed for account {account_id}, sym {sym}: {error_msg}")
+                results_root.append(ET.Element('error', {
+                    'sym': sym,
+                    'amount': amount_str,
+                    'limit': limit_str,
+                    'error': str(error_msg) # Include specific error from engine
+                }))
+        except Exception as e:
+            logger.exception(f"Unexpected error during place_order call for account {account_id}")
+            results_root.append(ET.Element('error', {
+                'sym': sym,
+                'amount': amount_str,
+                'limit': limit_str,
+                'error': f'Internal server error during order processing: {e}'
+            }))
+    
+    def _process_query(self, query_elem, account_id, results_root):
+        """Process a query transaction"""
+        attrs = query_elem.attrib
+        trans_id = attrs.get('id')
+        
+        if not trans_id:
+            logger.warning(f"Query tag missing id attribute for account {account_id}")
+            results_root.append(ET.Element('error', {'error': "Query tag missing id attribute"}))
+            return
+            
+        try:
+            order_id = int(trans_id)
+            logger.info(f"Querying status for order ID: {order_id} (Account: {account_id})")
+
+            status_element = None
+            error_element = None
+
+            # Use a session scope for all database operations
+            with self.database.session_scope() as session:
+                # First, check if the order exists and belongs to the user
+                order_check = session.query(Order).filter_by(id=order_id).first()
+
+                if not order_check:
+                    logger.warning(f"Query failed: Order ID {order_id} not found (Account: {account_id})")
+                    error_element = ET.Element('error', {'id': trans_id, 'error': "Order not found"})
+                # Check if the order belongs to the requesting account
+                elif order_check.account_id != account_id:
+                    logger.warning(f"Account {account_id} attempted to query order {order_id} belonging to account {order_check.account_id}")
+                    error_element = ET.Element('error', {'id': trans_id, 'error': "Permission denied: Order belongs to another account"})
+                else:
+                    # Order exists and permission granted, now get the detailed status
+                    try:
+                        # Capture ALL data needed from the order within the session
+                        order_id = order_check.id
+                        order_account_id = order_check.account_id
+                        order_symbol = order_check.symbol_name
+                        order_amount = order_check.amount
+                        order_limit_price = float(order_check.limit_price)
+                        order_created_at = order_check.created_at.isoformat() if order_check.created_at else None
+                        order_open_shares = order_check.open_shares
+                        order_is_canceled = order_check.canceled_at is not None
+                        order_canceled_at = order_check.canceled_at.isoformat() if order_check.canceled_at else None
+
+                        # Get all executions for this order
+                        executions = session.query(Execution).filter_by(order_id=order_id).all()
+
+                        # Capture execution data within the session
+                        execution_data = []
+                        total_executed_shares = 0
+                        for execution in executions:
+                            exec_info = {
+                                "shares": execution.shares,
+                                "price": float(execution.price),
+                                "time": execution.executed_at.isoformat() if execution.executed_at else None,
+                                "timestamp": int(execution.executed_at.timestamp()) if execution.executed_at else int(time.time())
+                            }
+                            execution_data.append(exec_info)
+                            total_executed_shares += execution.shares
+
+                        # Calculate avg price if needed
+                        avg_executed_price = None
+                        if total_executed_shares > 0:
+                            avg_executed_price = sum(e["shares"] * e["price"] for e in execution_data) / total_executed_shares
+
+                        # Create the status element
+                        status_element = ET.Element('status', {'id': trans_id})
+
+                        # Add open status if applicable
+                        if order_open_shares != 0 and not order_is_canceled:
+                            open_elem = ET.Element('open', {'shares': str(abs(order_open_shares))})
+                            status_element.append(open_elem)
+
+                        # Add executions
+                        for execution in execution_data:
+                            exec_elem = ET.Element('executed', {
+                                'shares': str(execution["shares"]),
+                                'price': str(execution["price"]),
+                                'time': str(execution["timestamp"])
+                            })
+                            status_element.append(exec_elem)
+
+                        # Add canceled status if applicable
+                        if order_is_canceled and order_canceled_at:
+                            # Calculate canceled shares
+                            canceled_shares = abs(order_amount) - total_executed_shares
+                            canceled_shares = max(0, canceled_shares)  # Ensure non-negative
+
+                            cancel_time = int(datetime.datetime.fromisoformat(order_canceled_at).timestamp())
+                            canceled_elem = ET.Element('canceled', {
+                                'shares': str(canceled_shares),
+                                'time': str(cancel_time)
+                            })
+                            status_element.append(canceled_elem)
+
+                        logger.info(f"Successfully retrieved status for order {order_id}")
+
+                    except Exception as e:
+                        logger.exception(f"Error processing order details for {order_id}: {str(e)}")
+                        error_element = ET.Element('error', {'id': trans_id, 'error': f"Error processing order details: {str(e)}"})
+
+            # After session is closed, add either the status or error element
+            if error_element is not None:
+                results_root.append(error_element)
+            elif status_element is not None:
+                results_root.append(status_element)
+            else:
+                # This should not happen, but just in case
+                results_root.append(ET.Element('error', {'id': trans_id, 'error': "Unknown error occurred"}))
+
+        except ValueError:
+            logger.warning(f"Invalid transaction ID format '{trans_id}' in query for account {account_id}")
+            results_root.append(ET.Element('error', {'id': trans_id, 'error': "Invalid transaction ID format"}))
+        except Exception as e:
+            logger.exception(f"Error processing query for order ID '{trans_id}' (Account: {account_id})")
+            results_root.append(ET.Element('error', {'id': trans_id, 'error': f'Internal server error during query: {e}'}))
+    
+    def _process_cancel(self, cancel_elem, account_id, results_root):
+        """Process a cancel transaction"""
+        attrs = cancel_elem.attrib
+        trans_id = attrs.get('id')
+        
+        if not trans_id:
+            logger.warning(f"Cancel tag missing id attribute for account {account_id}")
+            results_root.append(ET.Element('error', {'error': "Cancel tag missing id attribute"}))
+            return
+
+        # Check permission before calling handle_cancel
+        try:
+            order_id_int = int(trans_id)
+            # Call handle_cancel with the account ID
+            logger.info(f"Attempting to cancel order ID: {trans_id} (Account: {account_id})")
+            self.handle_cancel(trans_id, results_root, account_id)
+
+        except ValueError:
+            logger.warning(f"Invalid transaction ID format '{trans_id}' in cancel for account {account_id}")
+            results_root.append(ET.Element('error', {'id': trans_id, 'error': "Invalid transaction ID format"}))
+        except Exception as e:
+            logger.exception(f"Error checking permission for cancel order ID '{trans_id}' (Account: {account_id})")
+            results_root.append(ET.Element('error', {'id': trans_id, 'error': f'Internal server error during cancel pre-check: {e}'}))
 
     def handle_cancel(self, trans_id, results_root, requesting_account_id):
         """Handle a cancel request and append the result XML element to results_root"""
