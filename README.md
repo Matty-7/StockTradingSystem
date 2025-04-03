@@ -38,6 +38,22 @@ python3 testing/run_all_tests.py --skip-server
 ```
 The `--skip-server` flag indicates that the tests should use the already running server instance from the first terminal.
 
+if you encounter port 5432 conflict, you can try terminal command:
+
+```bash
+sudo systemctl stop postgresql
+```
+
+and do the following to check if the port 5432 is free:
+```bash
+sudo lsof -i :5432
+```
+
+if it is free, you can do the following to start the server:
+```bash
+docker-compose down && docker-compose up --build
+```
+
 ## System Design
 
 ### Core Concepts

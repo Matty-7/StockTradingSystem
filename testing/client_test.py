@@ -265,7 +265,12 @@ def test_all_transaction_operation_query(account_id, transaction_id):
 
 def test_all_transaction_operations(client_socket):
   # Setup
-  send_xml_to_server(test_all_transaction_operations_setup(), client_socket)
+  setup_response = send_xml_to_server(test_all_transaction_operations_setup(), client_socket)
+  
+  # Check if setup was successful
+  if '<error' in setup_response:
+    print("Setup failed, aborting transaction operations test")
+    return
 
   # Send buy orders and get their IDs
   buy_response_xml = send_xml_to_server(test_all_transaction_operation_order_buy(), client_socket)
@@ -274,19 +279,30 @@ def test_all_transaction_operations(client_socket):
     root = ET.fromstring(buy_response_xml)
     for opened in root.findall('opened'):
       buy_ids.append(opened.get('id'))
+    
+    if not buy_ids:
+      print("No buy orders were opened. Check the buy operation response:")
+      print(buy_response_xml)
+      return # Cannot proceed without IDs
   except ET.ParseError as e:
     print(f"Error parsing buy response: {e}")
     print(f"Response was: {buy_response_xml}")
+    import traceback
+    traceback.print_exc()
     return # Cannot proceed without IDs
 
-  # Send sell orders (we don't necessarily need their IDs for this specific test flow)
-  send_xml_to_server(test_all_transaction_operation_order_sell(), client_socket)
-
+  # Send sell orders
+  sell_response_xml = send_xml_to_server(test_all_transaction_operation_order_sell(), client_socket)
+  if '<error' in sell_response_xml:
+    print("Warning: Sell order had errors, but continuing with available buy orders")
+  
   # Cancel the last buy order if we have at least one
   if len(buy_ids) >= 1:
       cancel_id = buy_ids[-1] # Use the last ID we received
       account_id_cancel = "3" # Account that made the buy order
-      send_xml_to_server(test_all_transaction_operation_cancel(account_id_cancel, cancel_id), client_socket)
+      cancel_response = send_xml_to_server(test_all_transaction_operation_cancel(account_id_cancel, cancel_id), client_socket)
+      if '<error' in cancel_response:
+        print(f"Warning: Failed to cancel order {cancel_id}")
   else:
       print("Skipping cancel test: No buy order IDs received.")
 
@@ -294,7 +310,9 @@ def test_all_transaction_operations(client_socket):
   if len(buy_ids) >= 1:
       query_id = buy_ids[0] # Use the first ID we received
       account_id_query = "3" # Account that made the buy order
-      send_xml_to_server(test_all_transaction_operation_query(account_id_query, query_id), client_socket)
+      query_response = send_xml_to_server(test_all_transaction_operation_query(account_id_query, query_id), client_socket)
+      if '<error' in query_response:
+        print(f"Warning: Failed to query order {query_id}")
   else:
       print("Skipping query test: No buy order IDs received.")
 
@@ -307,7 +325,15 @@ def send_xml_to_server(xml_request, client_socket):
   print("--------------------------------------------------")
   client_socket.sendall(xml_request.encode('utf-8'))
   print(f"Sent request:\n{xml_request}")
-  response_bytes = client_socket.recv(4096)
+  
+  # Improved receiving logic to handle large responses
+  response_bytes = b''
+  while True:
+    chunk = client_socket.recv(4096)
+    response_bytes += chunk
+    if len(chunk) < 4096:  # If we received less than the buffer size, we're done
+      break
+  
   response_str = response_bytes.decode('utf-8')
   print(f"Server response:\n{response_str}")
   print("--------------------------------------------------\n")
@@ -393,8 +419,16 @@ def main():
         print("Error: Socket connection timed out.")
     except ET.ParseError as e:
         print(f"XML Parsing Error during testing: {e}")
+        import traceback
+        traceback.print_exc()
+    except socket.error as e:
+        print(f"Socket Error: {e}")
+        import traceback
+        traceback.print_exc() 
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
+        import traceback
+        traceback.print_exc()
 
 
     finally:

@@ -81,35 +81,24 @@ def set_core_count(cores):
     os.environ["CPU_CORES"] = str(cores)
 
     try:
-        if os.name == "posix":  # Linux/macOS
-            taskset_path = shutil.which("taskset")  # Find full path
-            if not taskset_path:
-                raise FileNotFoundError("taskset command not found. Install 'util-linux' package.")
-
-            cpu_list = ",".join(map(str, range(cores)))  # Create a comma-separated CPU list
-            pid = str(os.getpid())
-            print(f"Process ID: {pid}")
-
-            # Use -p (set affinity for existing process)
-            result = subprocess.run(
-                [taskset_path, "-p", "-c", cpu_list, pid],
-                check=True,
-                capture_output=True,
-                text=True
-            )
-            print(f"taskset output: {result.stdout.strip()}")
-
-        elif os.name == "nt":  # Windows
-            p = psutil.Process(os.getpid())
-            p.cpu_affinity(list(range(cores)))
-            print(f"CPU affinity set to {list(range(cores))} on Windows")
-
-    except FileNotFoundError as fnf_error:
-        print(f"Error: {fnf_error}")
-    except subprocess.CalledProcessError as e:
-        print(f"taskset failed with error: {e.stderr.strip() if e.stderr else e}")
+        import psutil
+        p = psutil.Process(os.getpid())
+        
+        # Get available CPUs
+        available_cpus = list(range(psutil.cpu_count()))
+        # Use only the requested number of cores (but not more than available)
+        target_cpus = available_cpus[:min(cores, len(available_cpus))]
+        
+        if target_cpus:
+            p.cpu_affinity(target_cpus)
+            print(f"CPU affinity set to {target_cpus}")
+        else:
+            print("No CPUs available to set affinity")
+    except ImportError:
+        print("psutil module not available. Install with: pip install psutil")
     except Exception as e:
-        print(f"Unexpected error: {e}")
+        print(f"Unable to set CPU affinity: {e}")
+        print("Continuing with environment variable CPU_CORES only")
 
 def send_batch_requests(request_count):
     """Send a batch of requests to test system performance"""

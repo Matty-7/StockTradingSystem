@@ -20,7 +20,15 @@ success_lock = threading.Lock()
 
 # Global order tracking
 order_tracking = {}     # {account_id: [order_ids]}
-order_tracking_lock = threading.Lock()
+account_locks = {}      # {account_id: lock} - per-account locks
+order_tracking_lock = threading.Lock()  # Only used when creating new account entries
+
+def get_account_lock(account_id):
+    """Get or create a lock for a specific account"""
+    with order_tracking_lock:
+        if account_id not in account_locks:
+            account_locks[account_id] = threading.Lock()
+        return account_locks[account_id]
 
 def setup_test_environment(client_socket):
     """Create test environment: accounts and stocks"""
@@ -93,9 +101,11 @@ def concurrent_worker(thread_id, client_socket):
                 # If successful, record order ID
                 order_id = parse_order_id(response)
                 if order_id:
-                    with order_tracking_lock:
+                    with get_account_lock(account_id):
                         if account_id not in order_tracking:
-                            order_tracking[account_id] = []
+                            with order_tracking_lock:
+                                if account_id not in order_tracking:
+                                    order_tracking[account_id] = []
                         order_tracking[account_id].append(order_id)
 
                         if account_id not in local_orders:
@@ -112,7 +122,7 @@ def concurrent_worker(thread_id, client_socket):
             }
 
             # if there are existing orders, increase the weight of query and cancel
-            with order_tracking_lock:
+            with get_account_lock(account_id):
                 if any(len(orders) > 0 for orders in order_tracking.values()):
                     op_weights['buy'] = 0.3
                     op_weights['sell'] = 0.2
@@ -140,9 +150,11 @@ def concurrent_worker(thread_id, client_socket):
                 # if successful, record order ID
                 order_id = parse_order_id(response)
                 if order_id:
-                    with order_tracking_lock:
+                    with get_account_lock(account_id):
                         if account_id not in order_tracking:
-                            order_tracking[account_id] = []
+                            with order_tracking_lock:
+                                if account_id not in order_tracking:
+                                    order_tracking[account_id] = []
                         order_tracking[account_id].append(order_id)
 
                         if account_id not in local_orders:
@@ -158,9 +170,11 @@ def concurrent_worker(thread_id, client_socket):
                 # if successful, record order ID
                 order_id = parse_order_id(response)
                 if order_id:
-                    with order_tracking_lock:
+                    with get_account_lock(account_id):
                         if account_id not in order_tracking:
-                            order_tracking[account_id] = []
+                            with order_tracking_lock:
+                                if account_id not in order_tracking:
+                                    order_tracking[account_id] = []
                         order_tracking[account_id].append(order_id)
 
                         if account_id not in local_orders:
@@ -170,7 +184,7 @@ def concurrent_worker(thread_id, client_socket):
             elif op_type == 'query':
                 # select known order ID for query
                 order_id = None
-                with order_tracking_lock:
+                with get_account_lock(account_id):
                     if account_id in order_tracking and order_tracking[account_id]:
                         # 95% probability to use known ID, 5% probability to use random ID
                         if random.random() < 0.95:
@@ -186,7 +200,7 @@ def concurrent_worker(thread_id, client_socket):
             elif op_type == 'cancel':
                 # select known order ID for cancel
                 order_id = None
-                with order_tracking_lock:
+                with get_account_lock(account_id):
                     # first select orders created by local thread
                     if account_id in local_orders and local_orders[account_id]:
                         if random.random() < 0.9:  # 90% chance to use known ID
@@ -204,7 +218,7 @@ def concurrent_worker(thread_id, client_socket):
 
                 # if cancel successful, remove from tracking list
                 if '<canceled' in response and order_id:
-                    with order_tracking_lock:
+                    with get_account_lock(account_id):
                         if account_id in order_tracking and order_id in order_tracking[account_id]:
                             order_tracking[account_id].remove(order_id)
                         if account_id in local_orders and order_id in local_orders[account_id]:
