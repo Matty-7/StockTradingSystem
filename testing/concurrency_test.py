@@ -76,14 +76,17 @@ def concurrent_worker(thread_id, client_socket):
     """Work performed by each concurrent thread"""
     global success_count, error_count, race_condition_count, order_tracking
 
+    # Track operations locally for this thread
+    local_success = 0
+    local_error = 0
+    local_race = 0
+    operations_completed = 0
+    operations_expected = OPERATIONS_PER_THREAD
+
+    # record successful orders for each account
+    local_orders = {}
+
     try:
-        local_success = 0
-        local_error = 0
-        local_race = 0
-
-        # record successful orders for each account
-        local_orders = {}
-
         # Start with a few guaranteed successful operations
         if thread_id % TEST_ACCOUNTS < 3:  # First 3 threads perform safer operations
             # First create some guaranteed successful orders
@@ -93,6 +96,8 @@ def concurrent_worker(thread_id, client_socket):
             small_price = random.uniform(10, 30)
             response = execute_buy(account_id, small_amount, small_price, client_socket)
 
+            operations_completed += 1
+
             # Track success/failure
             if '<error' in response:
                 local_error += 1
@@ -101,8 +106,10 @@ def concurrent_worker(thread_id, client_socket):
                 # If successful, record order ID
                 order_id = parse_order_id(response)
                 if order_id:
+                    # Use per-account lock instead of global lock
                     with get_account_lock(account_id):
                         if account_id not in order_tracking:
+                            # Need global lock to add new key to the dictionary
                             with order_tracking_lock:
                                 if account_id not in order_tracking:
                                     order_tracking[account_id] = []
@@ -112,8 +119,10 @@ def concurrent_worker(thread_id, client_socket):
                             local_orders[account_id] = []
                         local_orders[account_id].append(order_id)
 
-        for op in range(OPERATIONS_PER_THREAD - 1 if thread_id % TEST_ACCOUNTS < 3 else OPERATIONS_PER_THREAD):  # Adjust for initial guaranteed operation
-
+        remaining_ops = OPERATIONS_PER_THREAD - operations_completed
+        for op in range(remaining_ops):  # Adjust for initial guaranteed operation
+            operations_completed += 1
+            
             op_weights = {
                 'buy': 0.5,     # higher probability to buy, create orders
                 'sell': 0.2,    # moderate probability to sell
@@ -122,7 +131,7 @@ def concurrent_worker(thread_id, client_socket):
             }
 
             # if there are existing orders, increase the weight of query and cancel
-            with get_account_lock(account_id):
+            with order_tracking_lock:
                 if any(len(orders) > 0 for orders in order_tracking.values()):
                     op_weights['buy'] = 0.3
                     op_weights['sell'] = 0.2
@@ -233,18 +242,30 @@ def concurrent_worker(thread_id, client_socket):
             else:
                 local_success += 1
 
-        # update global counters
+    except Exception as e:
+        print(f"Thread {thread_id} exception: {e}")
+        import traceback
+        traceback.print_exc()
+        
+        # Calculate remaining operations that weren't completed
+        operations_remaining = operations_expected - operations_completed
+        if operations_remaining > 0:
+            # Count all remaining uncompleted operations as errors
+            local_error += operations_remaining
+            print(f"Thread {thread_id} had {operations_remaining} operations that failed due to exception")
+
+    finally:
+        # Always update global counters, whether thread completed normally or with exception
         with success_lock:
             success_count += local_success
             error_count += local_error
             race_condition_count += local_race
 
-        print(f"Thread {thread_id} completed: success={local_success}, errors={local_error}, race_conditions={local_race}")
-
-    except Exception as e:
-        print(f"Thread {thread_id} exception: {e}")
-        with success_lock:
-            error_count += 1
+        print(f"Thread {thread_id} completed: success={local_success}, errors={local_error}, race_conditions={local_race}, total={local_success + local_error + local_race}")
+        
+        # Sanity check
+        if local_success + local_error + local_race != operations_expected:
+            print(f"WARNING: Thread {thread_id} count mismatch! Expected {operations_expected}, counted {local_success + local_error + local_race}")
 
 def execute_buy(account_id, amount, price, client_socket):
     """Execute buy operation"""
