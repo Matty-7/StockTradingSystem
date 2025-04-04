@@ -334,7 +334,7 @@ def send_xml_to_server(xml_request, client_socket):
     if len(chunk) < 4096:  # If we received less than the buffer size, we're done
       break
   
-  response_str = response_bytes.decode('utf-8')
+  response_str = response_bytes.decode('utf-8', errors='replace')
   print(f"Server response:\n{response_str}")
   print("--------------------------------------------------\n")
   return response_str # Return the response

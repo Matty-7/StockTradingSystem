@@ -225,10 +225,10 @@ def send_xml_to_server(xml_request, client_socket, timeout=2):
         # Original code
         client_socket.sendall(xml_request.encode('utf-8'))
         response_bytes = client_socket.recv(4096)
-        response_str = response_bytes.decode('utf-8')
+        response_str = response_bytes.decode('utf-8', errors='replace')
         return response_str
     except socket.timeout:
-        return "<results><error>Request timed out</error></results>"
+        return "<results><e>Request timed out</e></results>"
 
 if __name__ == "__main__":
     available_cores = os.cpu_count()
