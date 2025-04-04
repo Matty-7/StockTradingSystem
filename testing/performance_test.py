@@ -70,35 +70,41 @@ def run_performance_test(core_counts, iterations=3):
 
     return results
 
-# def set_core_count(cores):
-#     """Set the number of cores for the server to use (via environment variable)"""
-#     print(f"Setting server to use {cores} cores...")
-#     os.environ["CPU_CORES"] = str(cores)
-
 def set_core_count(cores):
-    """Set the number of CPU cores for the server to use"""
+    """Set the number of cores for the server to use by restarting it"""
     print(f"Setting server to use {cores} cores...")
-    os.environ["CPU_CORES"] = str(cores)
-
+    
+    # Kill existing server if running (find pid by port)
     try:
-        import psutil
-        p = psutil.Process(os.getpid())
-        
-        # Get available CPUs
-        available_cpus = list(range(psutil.cpu_count()))
-        # Use only the requested number of cores (but not more than available)
-        target_cpus = available_cpus[:min(cores, len(available_cpus))]
-        
-        if target_cpus:
-            p.cpu_affinity(target_cpus)
-            print(f"CPU affinity set to {target_cpus}")
-        else:
-            print("No CPUs available to set affinity")
-    except ImportError:
-        print("psutil module not available. Install with: pip install psutil")
+        import subprocess
+        # Find process using port 12345
+        result = subprocess.run(["lsof", "-i", ":12345", "-t"], capture_output=True, text=True)
+        if result.stdout.strip():
+            pid = result.stdout.strip()
+            print(f"Killing existing server process (PID: {pid})...")
+            subprocess.run(["kill", pid], check=False)
+            time.sleep(2)  # Wait for server to terminate
     except Exception as e:
-        print(f"Unable to set CPU affinity: {e}")
-        print("Continuing with environment variable CPU_CORES only")
+        print(f"Warning: Unable to kill existing server: {e}")
+    
+    # Start new server process with desired core count
+    try:
+        server_env = os.environ.copy()
+        server_env["CPU_CORES"] = str(cores)
+        
+        # Get path to server.py (assuming it's in the parent directory)
+        server_path = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "server.py"))
+        
+        # Start server in background
+        print(f"Starting server with {cores} cores...")
+        subprocess.Popen(["python3", server_path], env=server_env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        
+        # Wait for server to initialize
+        time.sleep(3)
+        print(f"Server restarted with {cores} cores")
+    except Exception as e:
+        print(f"Error starting server: {e}")
+        raise
 
 def send_batch_requests(request_count):
     """Send a batch of requests to test system performance"""

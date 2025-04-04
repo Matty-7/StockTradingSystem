@@ -8,14 +8,16 @@ import os
 import logging
 import queue
 import time
-from concurrent.futures import ThreadPoolExecutor
+import multiprocessing
+from multiprocessing import Process, Queue
+import signal
 
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     handlers=[logging.StreamHandler()])
 logger = logging.getLogger(__name__)
 
-# Configure number of worker threads based on CPU cores
+# Configure number of worker processes based on CPU cores
 NUM_WORKERS = os.cpu_count() or 4  # Default to 4 if cpu_count is None
 if 'CPU_CORES' in os.environ:
     try:
@@ -23,17 +25,19 @@ if 'CPU_CORES' in os.environ:
     except ValueError:
         pass  # Use the default if the environment variable is not a valid integer
 
-logger.info(f"Configuring server with {NUM_WORKERS} worker threads")
+logger.info(f"Configuring server with {NUM_WORKERS} worker processes")
 
-# Shared database connection pool
+# Database connection information - each process will create its own connection
 db_url = os.environ.get('DATABASE_URL', 'postgresql://username:password@localhost/exchange')
 logger.info(f"Database URL: {db_url}")
-database = Database(db_url)
-matching_engine = MatchingEngine(database)
-xml_handler = XMLHandler(database, matching_engine)
 
-def handle_client(client_socket, address):
+def handle_client(client_socket, address, db_url):
     """Handle a client connection, allowing multiple requests."""
+    # Create database connection for this process
+    database = Database(db_url)
+    matching_engine = MatchingEngine(database)
+    xml_handler = XMLHandler(database, matching_engine)
+    
     try:
         while True:  # Keep reading requests from the client
             length_str = b""
@@ -121,17 +125,24 @@ def handle_client(client_socket, address):
         logger.info(f"Closing connection for client {address}")
         client_socket.close()  # Ensure socket is closed
 
-def worker_thread(task_queue):
-    """Worker thread to process client connections from the queue"""
+def worker_process(task_queue, db_url):
+    """Worker process to handle client connections"""
+    # Set up signal handlers for graceful shutdown
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    
+    logger.info(f"Worker process {os.getpid()} started")
+    
     while True:
-        client_socket, address = task_queue.get()
         try:
-            logger.info(f"Worker handling client {address}")
-            handle_client(client_socket, address)
+            client_socket, address = task_queue.get()
+            if client_socket is None:  # Sentinel value to exit
+                logger.info(f"Worker process {os.getpid()} received shutdown signal")
+                break
+                
+            logger.info(f"Process {os.getpid()} handling client {address}")
+            handle_client(client_socket, address, db_url)
         except Exception as e:
-            logger.exception(f"Worker exception handling client {address}: {e}")
-        finally:
-            task_queue.task_done()
+            logger.exception(f"Worker process exception: {e}")
 
 def main():
     # Create server socket
@@ -143,30 +154,51 @@ def main():
 
     # Start listening
     server.listen(100)  # Increased backlog for high-load scenarios
-    print(f"Exchange server started on port 12345 with {NUM_WORKERS} worker threads...")
+    print(f"Exchange server started on port 12345 with {NUM_WORKERS} worker processes...")
 
-    # Create a task queue for worker threads
-    task_queue = queue.Queue()
+    # Create a task queue for worker processes
+    # Use multiprocessing Queue for inter-process communication
+    task_queue = multiprocessing.Queue()
     
-    # Start worker pool with ThreadPoolExecutor - easier management and better thread reuse
-    with ThreadPoolExecutor(max_workers=NUM_WORKERS) as executor:
-        # Submit worker function to executor
-        for _ in range(NUM_WORKERS):
-            executor.submit(worker_thread, task_queue)
-        
-        try:
-            while True:
-                # Accept client connection and add to queue
-                client, address = server.accept()
-                logger.info(f"Accepted connection from {address}, queuing for processing")
-                task_queue.put((client, address))
-        except KeyboardInterrupt:
-            logger.info("Server shutting down (KeyboardInterrupt)")
-        finally:
-            logger.info("Waiting for all tasks to complete...")
-            task_queue.join()  # Wait for all tasks to be processed
-            server.close()
-            logger.info("Server shutdown complete")
+    # Create and start worker processes
+    workers = []
+    for _ in range(NUM_WORKERS):
+        p = Process(target=worker_process, args=(task_queue, db_url))
+        p.daemon = True  # Allow main process to exit even if workers are running
+        p.start()
+        workers.append(p)
+    
+    # Set up signal handler for graceful shutdown
+    def signal_handler(sig, frame):
+        logger.info("Received interrupt signal, shutting down...")
+        for _ in workers:
+            task_queue.put((None, None))  # Send sentinel to each worker
+        for p in workers:
+            p.join(timeout=5)  # Wait for workers to exit
+        server.close()
+        logger.info("Server shutdown complete")
+        exit(0)
+    
+    signal.signal(signal.SIGINT, signal_handler)
+    
+    try:
+        while True:
+            # Accept client connection and add to queue
+            client, address = server.accept()
+            logger.info(f"Accepted connection from {address}, queuing for processing")
+            task_queue.put((client, address))
+    except KeyboardInterrupt:
+        logger.info("Server shutting down (KeyboardInterrupt)")
+    finally:
+        logger.info("Shutting down worker processes...")
+        for _ in workers:
+            task_queue.put((None, None))  # Send sentinel to each worker
+        for p in workers:
+            p.join(timeout=5)  # Wait for workers to exit
+        server.close()
+        logger.info("Server shutdown complete")
 
 if __name__ == "__main__":
+    # Use "spawn" start method for better cross-platform compatibility
+    multiprocessing.set_start_method('spawn', force=True)
     main()
