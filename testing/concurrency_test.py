@@ -348,7 +348,6 @@ def run_concurrency_test():
         print(f"Total operations: {total_ops}")
         print(f"Successful operations: {success_count} ({success_rate:.2f}%)")
         print(f"Error operations: {error_count}")
-        print(f"Race conditions: {race_condition_count}")
         print("=================================================")
 
     except Exception as e:
