@@ -5,7 +5,7 @@
 
 ## Abstract
 
-We design, implement, and systematically optimize a TCP-based financial exchange matching engine capable of processing concurrent buy, sell, query, and cancel orders across multiple accounts and symbols. The server is built in Python with a pre-fork multi-process architecture backed by PostgreSQL. Starting from a single-process baseline, we apply eight targeted optimizations spanning I/O, concurrency control, in-memory data structures, and network protocol efficiency. The final system achieves **727 requests/second** at 8 cores — a **4.7× throughput gain** over 1 core — while maintaining end-to-end latency below **11.3 ms** across all core configurations. Concurrency stress tests confirm **zero system errors** across 6,000 concurrent operations. Residual latency is attributed to fundamental PostgreSQL row-lock serialization, analyzed through the Universal Scalability Law (USL), with a clear architectural path toward sub-millisecond matching via Symbol-Partitioned Routing.
+I design, implement, and systematically optimize a TCP-based financial exchange matching engine capable of processing concurrent buy, sell, query, and cancel orders across multiple accounts and symbols. The server is built in Python with a pre-fork multi-process architecture backed by PostgreSQL. Starting from a single-process baseline, I apply eight targeted optimizations spanning I/O, concurrency control, in-memory data structures, and network protocol efficiency. The final system achieves **727 requests/second** at 8 cores — a **4.7× throughput gain** over 1 core — while maintaining end-to-end latency below **11.3 ms** across all core configurations. Concurrency stress tests confirm **zero system errors** across 6,000 concurrent operations. Residual latency is attributed to fundamental PostgreSQL row-lock serialization, analyzed through the Universal Scalability Law (USL), with a clear architectural path toward sub-millisecond matching via Symbol-Partitioned Routing.
 
 ---
 
@@ -117,7 +117,7 @@ All responses are either a valid success or a well-formed business rejection. No
 
 ## Conclusion
 
-We successfully implemented a correct, high-performance exchange matching server in Python. The pre-fork multi-process architecture eliminates GIL contention, the in-memory order book with `LISTEN/NOTIFY` synchronization reduces average match latency by 14–33%, and adaptive connection pooling plus `TCP_NODELAY` flatten the latency curve to within 0.77 ms across all core counts.
+I successfully implemented a correct, high-performance exchange matching server in Python. The pre-fork multi-process architecture eliminates GIL contention, the in-memory order book with `LISTEN/NOTIFY` synchronization reduces average match latency by 14–33%, and adaptive connection pooling plus `TCP_NODELAY` flatten the latency curve to within 0.77 ms across all core counts.
 
 The system is now **I/O and database-lock bound**, not CPU-bound. Two structural bottlenecks remain:
 

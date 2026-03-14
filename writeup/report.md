@@ -4,7 +4,7 @@ Author: Jingheng Huan
 
 ## Introduction
 
-This project implements an exchange matching engine with account, symbol, order, query, and cancel support over a TCP/XML protocol. We evaluate scalability versus CPU core count and report both throughput and latency.
+This project implements an exchange matching engine with account, symbol, order, query, and cancel support over a TCP/XML protocol. I evaluate scalability versus CPU core count and report both throughput and latency.
 
 ## Methodology
 
