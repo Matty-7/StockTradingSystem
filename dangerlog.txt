@@ -1,7 +1,14 @@
-Danger Log:
+Danger Log (Open Risk Notes)
 
-1. We do not limit the size and the number of request of the xml. What if an attacker DOS our server by having numerous request in a single xml (e.g. for create a lot of accounts, for transaction, create a lot of queeries/cancel/orders)?
+1. Request-size abuse risk
+   No hard limits on XML payload size or number of child operations per request.
+   Potential impact: memory pressure and denial-of-service.
 
-2. Similarly, what if an attacker similarly connects but does not send anything? Or what if a client simply forgets to discconnect?
+2. Connection idle risk
+   Long-lived idle clients are not aggressively evicted.
+   Potential impact: worker/file-descriptor exhaustion under malicious or buggy clients.
 
-3. Currently, there are no credentials validation, meaning that you client can access the stocks and balance of another account.
+3. Authentication/authorization scope
+   Protocol has account-level operation checks for order/query/cancel ownership,
+   but no full client authentication layer (e.g., credentials/session tokens).
+   Potential impact: weak security model outside assignment assumptions.

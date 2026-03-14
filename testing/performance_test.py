@@ -30,13 +30,13 @@ def measure_latency(request_count):
             client_socket.close()
 
     if not latencies:
-        return 0, 0, latencies
+        return 0, 0
 
     avg_latency = statistics.mean(latencies)
     std_dev_latency = statistics.stdev(latencies) if len(latencies) > 1 else 0
     return avg_latency, std_dev_latency
 
-def run_performance_test(core_counts, iterations=3):
+def run_performance_test(core_counts, iterations=10):
     """Run performance tests with different core counts"""
     results = {}
 
@@ -77,7 +77,6 @@ def set_core_count(cores):
     
     # Kill existing server if running (find pid by port)
     try:
-        import subprocess
         # Find process using port 12345
         result = subprocess.run(["lsof", "-i", ":12345", "-t"], capture_output=True, text=True)
         if result.stdout.strip():
@@ -206,12 +205,18 @@ def generate_graph(results):
         for c in cores
     ]
 
+    n = results[cores[0]]["iterations"] if cores else 0
+
     plt.figure(figsize=(10, 6))
     for i, c in enumerate(cores):
         vals = results[c]["raw_throughputs"]
-        jitter = [cores[i] + d for d in (-0.08, 0.0, 0.08)[:len(vals)]]
+        if len(vals) > 1:
+            offsets = [(-0.12 + (0.24 * k / (len(vals) - 1))) for k in range(len(vals))]
+        else:
+            offsets = [0.0]
+        jitter = [cores[i] + d for d in offsets]
         plt.scatter(jitter, vals, color="#90caf9", s=35, alpha=0.75)
-    plt.errorbar(cores, avg_throughputs, yerr=se_throughput, fmt='o-', capsize=5, linewidth=2, label='Mean ± SE (n=3)')
+    plt.errorbar(cores, avg_throughputs, yerr=se_throughput, fmt='o-', capsize=5, linewidth=2, label=f'Mean ± SE (n={n})')
     plt.xlabel("Number of Cores")
     plt.ylabel("Throughput (requests/second)")
     plt.title("Throughput vs Number of Cores (Measured Data)")
@@ -224,9 +229,13 @@ def generate_graph(results):
     plt.figure(figsize=(10, 6))
     for i, c in enumerate(cores):
         vals = results[c]["raw_avg_latencies"]
-        jitter = [cores[i] + d for d in (-0.08, 0.0, 0.08)[:len(vals)]]
+        if len(vals) > 1:
+            offsets = [(-0.12 + (0.24 * k / (len(vals) - 1))) for k in range(len(vals))]
+        else:
+            offsets = [0.0]
+        jitter = [cores[i] + d for d in offsets]
         plt.scatter(jitter, vals, color="#ffcdd2", s=35, alpha=0.75)
-    plt.errorbar(cores, avg_latencies, yerr=se_latency, fmt='o-', capsize=5, linewidth=2, label='Mean ± SE (n=3)', color='r')
+    plt.errorbar(cores, avg_latencies, yerr=se_latency, fmt='o-', capsize=5, linewidth=2, label=f'Mean ± SE (n={n})', color='r')
     plt.xlabel("Number of Cores")
     plt.ylabel("Latency (seconds)")
     plt.title("Latency vs Number of Cores (Measured Data)")
