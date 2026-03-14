@@ -429,7 +429,62 @@ Throughput scaling vs 1 core: **2.0× at 2 cores, 3.3× at 4 cores, 4.7× at 8 c
 
 ---
 
-## Future Work
+## Architectural Bottlenecks & Future Work
 
-- **Single-statement atomic match:** Express the full match (find + lock + execute + position + balance) as a single PostgreSQL CTE, reducing per-match round-trips from 4–5 to 1.
-- Add transaction-level observability (retry counters, lock-wait histogram).
+After eliminating the GIL (pre-fork multi-process), reducing WAL fsync overhead (`synchronous_commit = off`), adding an in-memory order book with cross-worker synchronisation (`LISTEN/NOTIFY`), right-sizing the connection pool, and eliminating per-byte syscalls (`recv(1)` → buffered read + `TCP_NODELAY`), the system is no longer CPU-bound. Profiling reveals two remaining structural bottlenecks.
+
+---
+
+### Bottleneck 1: The Database Round-Trip Tax
+
+Each `place_order` call issues approximately **6 independent SQL round-trips** to PostgreSQL over a localhost connection:
+
+| Step | SQL |
+|---|---|
+| 1 | `BEGIN` |
+| 2 | `SELECT ... FROM accounts FOR UPDATE` (lock buyer/seller row) |
+| 3 | `INSERT INTO orders` + ORM flush |
+| 4 | `SELECT pg_notify(...)` (LISTEN/NOTIFY publish) |
+| 5 | `SELECT ... FROM orders FOR UPDATE SKIP LOCKED` (lock matched order) |
+| 6 | `COMMIT` (flushes position UPSERTs + balance UPDATEs) |
+
+Even on localhost, each Python → PostgreSQL round-trip costs ~0.3–0.8 ms (socket write → kernel → PostgreSQL process → kernel → socket read). Six round-trips account for **2–5 ms** of the observed ~6–7 ms match latency.
+
+**Future iteration:** Consolidating steps 2–5 into a single **Common Table Expression (CTE)** would collapse those round-trips to one, with PostgreSQL executing the lock, insert, match, and update internally in a single planner pass. Theoretical savings: **−40–50% match latency**.
+
+**Why this is not implemented now:** A CTE executes as a flat pipeline — it cannot express the *loop* required for partial fills (one 1000-share market order consuming three separate resting limit orders at different prices). Encoding this state machine in recursive SQL produces code that is fragile and nearly impossible to maintain. Partial-fill correctness would have to be delegated back to application code anyway, negating much of the benefit.
+
+---
+
+### Bottleneck 2: Single-Symbol Lock Contention (The Industry Ceiling)
+
+The benchmark routes all traffic through one symbol (`MPERF`). Even with `SKIP LOCKED`, 8 workers serialise on PostgreSQL's internal lock manager when they all attempt to acquire row-level locks on orders of the same symbol concurrently. This is the κ (coherency cost) term in the Universal Scalability Law and the direct cause of the mild latency increase from 1 to 8 cores.
+
+**Future iteration — Symbol-Partitioned Routing (Lock Sharding):**
+
+Assign each symbol to exactly one worker process (via a `symbol_name → worker_id` hash). All orders for `MPERF` are routed to Worker-3; `AAPL` to Worker-7; etc. Within each worker, matching is handled by a single thread operating on its in-memory order book with no locking whatsoever — the book is never shared with another thread. Matched trades are written to PostgreSQL **asynchronously** (fire-and-forget after commit) rather than in the hot path.
+
+This eliminates database lock contention *entirely* for the matching step and replaces it with:
+
+- A fast `symbol_name` hash at the accept layer (O(1), ~10 ns)  
+- A lock-free in-memory FIFO queue per worker (e.g., `multiprocessing.Queue` or a ring buffer)  
+- A background write-behind thread for durability
+
+Theoretical match latency: **< 1 ms** (pure in-memory, no PostgreSQL in the hot path).
+
+This is the architectural principle behind LMAX Disruptor and most modern high-frequency trading matching engines: one thread per instrument, lock-free ring buffer, asynchronous persistence.
+
+**Why this is not implemented now:** The single-symbol test workload (`MPERF`) would make the system degenerate to single-core performance — every request lands on the same worker. The benefit only materialises with a realistic multi-symbol distribution (hundreds of symbols spread across workers). Implementing the routing layer, per-worker queues, and write-behind persistence is a significant architectural investment beyond the scope of this project.
+
+---
+
+### Summary: Scalability Ceiling Diagnosis
+
+| Layer | Current state | Next bottleneck | Industrial solution |
+|---|---|---|---|
+| CPU / GIL | Eliminated (pre-fork) | — | — |
+| WAL I/O | Eliminated (`sync_commit=off`) | — | — |
+| Order book staleness | Mitigated (`LISTEN/NOTIFY`) | — | — |
+| TCP send latency | Eliminated (`TCP_NODELAY`) | — | — |
+| **DB round-trips** | **6 per match (~3–5 ms)** | **Binding** | Single CTE (limited) |
+| **Row-lock contention** | **Mild (+0.8 ms at 8 cores)** | **Binding at scale** | Symbol-partitioned routing |
