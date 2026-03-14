@@ -26,9 +26,9 @@ I design, implement, and systematically optimize a TCP-based financial exchange 
 The server uses a **pre-fork multi-process model**: the parent process binds the TCP socket, then forks N worker processes that all `accept()` on the shared socket. This eliminates Python's Global Interpreter Lock (GIL) — each worker runs in a separate OS process with its own GIL — while keeping connection setup simple.
 
 ```
-Client Connections
-      │
-  ┌───▼────────────────────────────────────────┐
+                 Client Connections
+                        │
+  ┌─────────────────────▼──────────────────────┐
   │  Pre-Fork Server (server.py)               │
   │  ┌──────────┐  ┌──────────┐  ┌──────────┐  │
   │  │ Worker-1 │  │ Worker-2 │  │ Worker-N │  │
