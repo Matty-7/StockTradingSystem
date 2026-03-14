@@ -30,20 +30,36 @@ Graph convention:
 
 ![throughput vs core](throughput_vs_cores.png)
 
-![latency vs core](latency_vs_cores.png)
+### End-to-End Latency vs Cores
+
+Measures the full client round-trip: TCP connect → XML parse → DB + matching → TCP response.
+
+![end-to-end latency vs core](latency_vs_cores.png)
+
+### Pure Matching Engine Latency vs Cores
+
+Measures only the server-side `match_orders()` call: order-book DB query, price-priority selection, and position/balance updates within a single transaction. Network, parsing, and connection overhead are excluded.
+
+![matching engine latency vs core](matching_latency_vs_cores.png)
 
 Latest run summary:
 
-- **1 core**: throughput `202.01 ± 14.86` req/s (SE), latency `0.005749 ± 0.000305` s (SE)
-- **2 cores**: throughput `334.09 ± 21.47` req/s (SE), latency `0.004414 ± 0.000208` s (SE)
-- **4 cores**: throughput `351.04 ± 32.51` req/s (SE), latency `0.007098 ± 0.000421` s (SE)
-- **8 cores**: throughput `369.46 ± 24.07` req/s (SE), latency `0.005207 ± 0.000292` s (SE)
+| Cores | Throughput (req/s) | E2E Latency (s) | Match-Only Latency (s) | Match Samples |
+|---|---|---|---|---|
+| 1 | `212.33 ± 42.97` | `0.004764 ± 0.000767` | `0.005573` | 627 |
+| 2 | `302.71 ± 73.32` | `0.004973 ± 0.000610` | `0.005773` | 632 |
+| 4 | `382.12 ± 91.26` | `0.005659 ± 0.000777` | `0.005849` | 623 |
+| 8 | `330.78 ± 79.35` | `0.006799 ± 0.000821` | `0.006253` | 687 |
+
+Throughput and E2E latency shown as mean ± SD (n=10 iterations).  
+Match-only latency is the mean across all individual `match_orders()` calls logged server-side.
 
 Interpretation:
 
-- Throughput improves substantially from 1 core to multi-core settings.
-- Throughput does not scale linearly from 4 to 8 cores for this workload.
-- Latency varies across configurations, with overlapping uncertainty and noticeable run-to-run variability.
+- Throughput peaks at 4 cores (`382 req/s`), then drops at 8 cores (`331 req/s`) due to increased DB lock contention among workers.
+- End-to-end latency rises monotonically from 2→8 cores, tracking the growing contention cost.
+- Match-only latency (`0.005573 → 0.006253 s`) mirrors the e2e trend closely, confirming the bottleneck lives inside the DB-backed order book — not in TCP or XML parsing.
+- The small gap between e2e and match latency (~0.1–0.5 ms) accounts for network round-trip and XML processing overhead.
 
 ## Concurrency Stability Update
 

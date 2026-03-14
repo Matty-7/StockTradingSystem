@@ -9,6 +9,8 @@ import random
 import sys
 from client_test import generate_indent
 
+MATCH_LATENCY_FILE = '/tmp/match_latencies.csv'
+
 def measure_latency(request_count):
     """Measure system latency"""
     latencies = []
@@ -36,6 +38,15 @@ def measure_latency(request_count):
     std_dev_latency = statistics.stdev(latencies) if len(latencies) > 1 else 0
     return avg_latency, std_dev_latency
 
+def _read_match_latencies():
+    """Read all matching-engine latency samples written by the server workers."""
+    try:
+        with open(MATCH_LATENCY_FILE, 'r') as f:
+            return [float(line.strip()) for line in f if line.strip()]
+    except (OSError, ValueError):
+        return []
+
+
 def run_performance_test(core_counts, iterations=10):
     """Run performance tests with different core counts"""
     results = {}
@@ -43,27 +54,40 @@ def run_performance_test(core_counts, iterations=10):
     for cores in core_counts:
         set_core_count(cores)
 
-        throughputs, latencies = [], []
+        throughputs, latencies, raw_match_iter_means = [], [], []
         for i in range(iterations):
             print(f"  - Running iteration {i+1}/{iterations} with {cores} cores...")
+            # Clear per-iteration so we get a mean for this iteration only
+            open(MATCH_LATENCY_FILE, 'w').close()
             throughput = measure_throughput(100)
             avg_latency, _ = measure_latency(100)
+            iter_samples = _read_match_latencies()
+            iter_match_mean = statistics.mean(iter_samples) if iter_samples else 0
             throughputs.append(throughput)
             latencies.append(avg_latency)
-            print(f"  - Completed iteration {i+1}: {throughput:.2f} req/sec, Latency: {avg_latency:.6f} sec")
+            raw_match_iter_means.append(iter_match_mean)
+            print(f"  - Completed iteration {i+1}: {throughput:.2f} req/sec, "
+                  f"Latency: {avg_latency:.6f} sec, Match: {iter_match_mean:.6f} sec "
+                  f"({len(iter_samples)} samples)")
 
         avg_throughput = statistics.mean(throughputs)
         std_dev_throughput = statistics.stdev(throughputs) if len(throughputs) > 1 else 0
         avg_latency = statistics.mean(latencies)
         std_dev_latency = statistics.stdev(latencies) if len(latencies) > 1 else 0
+        avg_match_latency = statistics.mean(raw_match_iter_means) if raw_match_iter_means else 0
+        std_dev_match = statistics.stdev(raw_match_iter_means) if len(raw_match_iter_means) > 1 else 0
 
         results[cores] = {
             "avg_throughput": avg_throughput,
             "std_dev_throughput": std_dev_throughput,
             "avg_latency": avg_latency,
             "std_dev_latency": std_dev_latency,
+            "avg_match_latency": avg_match_latency,
+            "std_dev_match_latency": std_dev_match,
+            "match_latency_n": iterations,
             "raw_throughputs": throughputs,
             "raw_avg_latencies": latencies,
+            "raw_match_iter_means": raw_match_iter_means,
             "iterations": iterations,
         }
         print(f"Completed testing with {cores} cores. Avg throughput: {avg_throughput:.2f} req/sec, Avg latency: {avg_latency:.6f} sec")
@@ -91,6 +115,7 @@ def set_core_count(cores):
     try:
         server_env = os.environ.copy()
         server_env["CPU_CORES"] = str(cores)
+        server_env["MATCH_LATENCY_FILE"] = MATCH_LATENCY_FILE
         
         # Get path to server.py (assuming it's in the parent directory)
         server_path = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "server.py"))
@@ -190,32 +215,35 @@ def measure_throughput(request_count):
     return throughput
 
 def generate_graph(results):
-    """Generate performance graphs for throughput and latency (mean ± SE)."""
+    """Generate throughput, end-to-end latency, and matching-engine latency graphs (mean ± SE)."""
     cores = sorted(results.keys())
+    n = results[cores[0]]["iterations"] if cores else 0
+
     avg_throughputs = [results[c]["avg_throughput"] for c in cores]
     se_throughput = [
         results[c]["std_dev_throughput"] / (results[c]["iterations"] ** 0.5)
         if results[c]["iterations"] > 0 else 0
         for c in cores
     ]
-    avg_latencies = [results[c]["avg_latency"] for c in cores]
-    se_latency = [
+    avg_e2e_latencies = [results[c]["avg_latency"] for c in cores]
+    se_e2e = [
         results[c]["std_dev_latency"] / (results[c]["iterations"] ** 0.5)
         if results[c]["iterations"] > 0 else 0
         for c in cores
     ]
+    avg_match_latencies = [results[c]["avg_match_latency"] for c in cores]
+    se_match = [
+        results[c]["std_dev_match_latency"] / (results[c]["match_latency_n"] ** 0.5)
+        if results[c]["match_latency_n"] > 1 else 0
+        for c in cores
+    ]
 
-    n = results[cores[0]]["iterations"] if cores else 0
-
+    # --- Throughput ---
     plt.figure(figsize=(10, 6))
     for i, c in enumerate(cores):
         vals = results[c]["raw_throughputs"]
-        if len(vals) > 1:
-            offsets = [(-0.12 + (0.24 * k / (len(vals) - 1))) for k in range(len(vals))]
-        else:
-            offsets = [0.0]
-        jitter = [cores[i] + d for d in offsets]
-        plt.scatter(jitter, vals, color="#90caf9", s=35, alpha=0.75)
+        offsets = [(-0.12 + (0.24 * k / (len(vals) - 1))) for k in range(len(vals))] if len(vals) > 1 else [0.0]
+        plt.scatter([c + d for d in offsets], vals, color="#90caf9", s=35, alpha=0.75)
     plt.errorbar(cores, avg_throughputs, yerr=se_throughput, fmt='o-', capsize=5, linewidth=2, label=f'Mean ± SE (n={n})')
     plt.xlabel("Number of Cores")
     plt.ylabel("Throughput (requests/second)")
@@ -226,23 +254,38 @@ def generate_graph(results):
     plt.savefig("writeup/throughput_vs_cores.png", dpi=180)
     plt.close()
 
+    # --- End-to-end latency ---
     plt.figure(figsize=(10, 6))
     for i, c in enumerate(cores):
         vals = results[c]["raw_avg_latencies"]
-        if len(vals) > 1:
-            offsets = [(-0.12 + (0.24 * k / (len(vals) - 1))) for k in range(len(vals))]
-        else:
-            offsets = [0.0]
-        jitter = [cores[i] + d for d in offsets]
-        plt.scatter(jitter, vals, color="#ffcdd2", s=35, alpha=0.75)
-    plt.errorbar(cores, avg_latencies, yerr=se_latency, fmt='o-', capsize=5, linewidth=2, label=f'Mean ± SE (n={n})', color='r')
+        offsets = [(-0.12 + (0.24 * k / (len(vals) - 1))) for k in range(len(vals))] if len(vals) > 1 else [0.0]
+        plt.scatter([c + d for d in offsets], vals, color="#ffcdd2", s=35, alpha=0.75)
+    plt.errorbar(cores, avg_e2e_latencies, yerr=se_e2e, fmt='o-', capsize=5, linewidth=2,
+                 label=f'Mean ± SE (n={n})', color='r')
     plt.xlabel("Number of Cores")
-    plt.ylabel("Latency (seconds)")
-    plt.title("Latency vs Number of Cores (Measured Data)")
+    plt.ylabel("End-to-End Latency (seconds)")
+    plt.title("End-to-End Latency vs Number of Cores\n(client round-trip: TCP + parse + DB + match)")
     plt.grid(True, alpha=0.3)
     plt.legend()
     plt.tight_layout()
     plt.savefig("writeup/latency_vs_cores.png", dpi=180)
+    plt.close()
+
+    # --- Pure matching-engine latency ---
+    plt.figure(figsize=(10, 6))
+    for i, c in enumerate(cores):
+        vals = results[c]["raw_match_iter_means"]
+        offsets = [(-0.12 + (0.24 * k / (len(vals) - 1))) for k in range(len(vals))] if len(vals) > 1 else [0.0]
+        plt.scatter([c + d for d in offsets], vals, color="#ffccbc", s=35, alpha=0.75)
+    plt.errorbar(cores, avg_match_latencies, yerr=se_match, fmt='s-', capsize=5, linewidth=2,
+                 label=f'Mean ± SE (n={n})', color='#e65100')
+    plt.xlabel("Number of Cores")
+    plt.ylabel("Matching Engine Latency (seconds)")
+    plt.title("Pure Matching Engine Latency vs Number of Cores\n(server-side: order-book query + execution only)")
+    plt.grid(True, alpha=0.3)
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig("writeup/matching_latency_vs_cores.png", dpi=180)
     plt.close()
 
 

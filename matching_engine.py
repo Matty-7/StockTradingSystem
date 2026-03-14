@@ -1,5 +1,6 @@
 import threading
 import logging
+import os
 import time
 import random
 from sqlalchemy.exc import OperationalError
@@ -7,6 +8,19 @@ from database import Account, Position
 from collections import defaultdict
 
 logger = logging.getLogger(__name__)
+
+_MATCH_LATENCY_FILE = os.environ.get('MATCH_LATENCY_FILE', '')
+
+
+def _log_match_latency(elapsed: float) -> None:
+    """Append a single matching-engine latency sample (seconds) to the shared file."""
+    if not _MATCH_LATENCY_FILE:
+        return
+    try:
+        with open(_MATCH_LATENCY_FILE, 'a') as f:
+            f.write(f"{elapsed}\n")
+    except OSError:
+        pass
 
 class MatchingEngine:
     def __init__(self, database):
@@ -159,7 +173,9 @@ class MatchingEngine:
                         self.logger.info(f"Created order {order_id}. Attempting match.")
 
                         # Try to match the order within the same transaction
+                        _match_start = time.time()
                         self.match_orders(order, session)
+                        _log_match_latency(time.time() - _match_start)
 
                         # If we reached here without exceptions, the DB transaction will commit
                         success = True
