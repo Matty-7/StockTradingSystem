@@ -3,6 +3,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import sessionmaker, scoped_session
 from contextlib import contextmanager
 import logging
+import os
 
 from model import Account, Symbol, Position, Order, Execution
 
@@ -10,13 +11,29 @@ class Database:
     def __init__(self, db_url="postgresql://username:password@localhost/exchange"):
         """initialize the database connection"""
         self.db_url = db_url
-        # Configure the SQLAlchemy engine with optimized connection pool settings
+
+        # Each worker is single-threaded (one request at a time), so it only ever
+        # needs 1–2 connections from the pool simultaneously.  Keeping pool_size
+        # proportional to worker count prevents idle connections from accumulating
+        # inside PostgreSQL's lock manager and shared-buffer structures, which
+        # otherwise inflate per-query latency at higher core counts.
+        # Scale pool proportionally: total open connections ≤ ~40 regardless of
+        # worker count, keeping PostgreSQL's backend overhead manageable.
+        # Formula: pool_size = clamp(16 // workers, 2, 8)
+        #   1 worker  → 8  (16 total + 1 LISTEN = 17)
+        #   2 workers → 8  (32 total + 2 LISTEN = 34)
+        #   4 workers → 4  (32 total + 4 LISTEN = 36)
+        #   8 workers → 2  (32 total + 8 LISTEN = 40)
+        num_workers = int(os.environ.get('CPU_CORES', os.cpu_count() or 4))
+        pool_size = max(2, min(8, 16 // num_workers))
+        max_overflow = max(1, pool_size // 2)      # small burst headroom
+
         self.engine = create_engine(
             self.db_url,
-            pool_size=20,               # Maximum number of connections to keep open
-            max_overflow=30,            # Maximum number of connections to create above pool_size
-            pool_timeout=30,            # Seconds to wait before giving up on getting a connection
-            pool_recycle=1800,          # Recycle connections after 30 minutes
+            pool_size=pool_size,
+            max_overflow=max_overflow,
+            pool_timeout=30,
+            pool_recycle=1800,
             echo_pool=False,
         )
 

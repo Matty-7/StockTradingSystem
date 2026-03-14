@@ -118,7 +118,7 @@ class PreForkServer:
                         break
                     # Poll with 1-second timeout so we can check self.running
                     import select as _select
-                    readable, _, _ = _select.select([conn], [], [], 1.0)
+                    readable, _, _ = _select.select([conn], [], [], 5.0)
                     if readable:
                         conn.poll()
                         while conn.notifies:
@@ -187,93 +187,90 @@ class PreForkServer:
         logger.info(f"Worker {os.getpid()} shutting down")
     
     def handle_client(self, client_socket, address, xml_handler):
-        """Handle a client connection, allowing multiple requests.""" 
+        """Handle a client connection with buffered reads.
+
+        The original implementation called recv(1) in a loop to read the
+        length prefix, triggering one kernel syscall per byte.  For a typical
+        4-byte length like "173\n" that is 4 unnecessary context switches per
+        request.  This version reads in 64-byte chunks and splits on '\\n',
+        collapsing the header read to a single syscall in the common case.
+
+        A persistent bytearray buffer is kept across requests on the same
+        connection so any bytes read beyond the current message are used for
+        the next one (handles TCP coalescing / pipelined requests).
+        """
+        # Disable Nagle's algorithm so each sendall() goes out immediately
+        # without the OS waiting to accumulate more data into a larger segment.
+        client_socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        buf = bytearray()
         try:
-            while True:  # Keep reading requests from the client
-                length_str = b""
-                try:
-                    char = client_socket.recv(1)
-                    while char != b"\n" and char != b"":
-                        length_str += char
-                        char = client_socket.recv(1)
-                except ConnectionResetError:
-                    logger.warning(f"Client {address} closed connection unexpectedly while reading length.")
-                    break
-                except Exception as e:
-                    logger.error(f"Error receiving length from {address}: {e}")
-                    break
+            while True:
+                # --- Phase 1: read until \n to get the message length ---
+                while b"\n" not in buf:
+                    chunk = client_socket.recv(64)
+                    if not chunk:
+                        logger.info(f"Client {address} disconnected.")
+                        return
+                    buf += chunk
 
-                if not length_str:
-                    logger.info(f"Client {address} disconnected gracefully (empty length).")
-                    break  # Client closed connection
+                newline_pos = buf.index(b"\n")
+                length_bytes = bytes(buf[:newline_pos])
+                buf = buf[newline_pos + 1:]
+
+                if not length_bytes:
+                    logger.info(f"Client {address} sent empty length line, closing.")
+                    return
 
                 try:
-                    message_length = int(length_str.decode('utf-8'))
-                    logger.debug(f"Received message length {message_length} from {address}")
+                    message_length = int(length_bytes.decode('utf-8'))
+                    logger.debug(f"Message length {message_length} from {address}")
                 except ValueError:
-                    error_msg = b"Error: Invalid message length format\n"
-                    logger.warning(f"Invalid message length received from {address}: {length_str.decode('utf-8', errors='ignore')}")
+                    logger.warning(f"Invalid length from {address}: {length_bytes!r}")
                     try:
-                        client_socket.sendall(error_msg)
-                    except Exception as send_e:
-                         logger.error(f"Error sending invalid length error to {address}: {send_e}")
-                    continue  # Allow next request
-                except Exception as e:
-                     logger.error(f"Error processing message length from {address}: {e}")
-                     break # Unexpected error, close connection
+                        client_socket.sendall(b"<results><error>Invalid message length</error></results>")
+                    except Exception:
+                        pass
+                    continue
 
-                xml_data = b""
-                bytes_read = 0
+                # --- Phase 2: read exactly message_length bytes ---
+                while len(buf) < message_length:
+                    chunk = client_socket.recv(min(4096, message_length - len(buf)))
+                    if not chunk:
+                        logger.warning(f"Client {address} disconnected mid-message "
+                                       f"({len(buf)}/{message_length} bytes received).")
+                        return
+                    buf += chunk
+
+                xml_data = bytes(buf[:message_length])
+                buf = buf[message_length:]
+
+                # --- Phase 3: process and respond ---
                 try:
-                    while bytes_read < message_length:
-                        # Read in chunks, but handle potential partial reads
-                        chunk = client_socket.recv(min(4096, message_length - bytes_read))
-                        if not chunk:
-                            logger.warning(f"Client {address} disconnected before sending full message (expected {message_length}, got {bytes_read}).")
-                            break # Connection closed prematurely
-                        xml_data += chunk
-                        bytes_read += len(chunk)
-                        logger.debug(f"Read chunk from {address}, total bytes: {bytes_read}/{message_length}")
-
-                    if bytes_read < message_length:
-                        logger.warning(f"Incomplete message received from {address} (expected {message_length}, got {bytes_read}).")
-                        # Depending on requirements, you might try to process partial data or just discard
-                        continue # Or break, depending on how partial requests should be handled
-
-                    # Process XML - using process-local XML handler
-                    logger.info(f"Processing XML request from {address} (length: {message_length})")
+                    logger.info(f"Processing XML from {address} ({message_length} bytes)")
                     response = xml_handler.process_request(xml_data.decode('utf-8'))
-
-                    # Send response
-                    logger.debug(f"Sending response to {address}: {response[:200]}...")
                     client_socket.sendall(response.encode('utf-8'))
                     logger.info(f"Response sent to {address}")
-
-                except ConnectionResetError:
-                     logger.warning(f"Client {address} closed connection unexpectedly during message read/process.")
-                     break
-                except UnicodeDecodeError as ude:
-                    logger.error(f"XML data from {address} is not valid UTF-8: {ude}")
+                except UnicodeDecodeError as e:
+                    logger.error(f"Non-UTF-8 payload from {address}: {e}")
                     try:
-                        client_socket.sendall(b"<results><error>Invalid UTF-8 encoding in XML</error></results>")
-                    except Exception as send_e:
-                        logger.error(f"Error sending UTF-8 error to {address}: {send_e}")
-                    continue # Allow next request, maybe?
+                        client_socket.sendall(b"<results><error>Invalid UTF-8 in XML</error></results>")
+                    except Exception:
+                        pass
                 except Exception as e:
-                    logger.exception(f"Error handling client {address} during message read/process: {e}")
-                    # Attempt to send a generic error response if the socket is still usable
+                    logger.exception(f"Error processing request from {address}: {e}")
                     try:
                         client_socket.sendall(b"<results><error>Internal server error</error></results>")
-                    except Exception as send_e:
-                        logger.error(f"Error sending generic error to {address} after exception: {send_e}")
-                    break # Close connection on unexpected processing errors
+                    except Exception:
+                        pass
+                    return
 
+        except ConnectionResetError:
+            logger.warning(f"Connection reset by {address}")
         except Exception as e:
-            # Catch exceptions occurring outside the main loop (e.g., during initial recv)
             logger.exception(f"Unhandled error for client {address}: {e}")
         finally:
-            logger.info(f"Closing connection for client {address}")
-            client_socket.close()  # Ensure socket is closed
+            logger.info(f"Closing connection for {address}")
+            client_socket.close()
     
     def signal_handler(self, sig, frame):
         """Handle signals to gracefully shut down the server"""

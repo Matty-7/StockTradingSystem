@@ -50,14 +50,18 @@ def ensure_test_entities():
 # ---------------------------------------------------------------------------
 
 def _random_request():
-    """Generate a random buy/sell/query/cancel from a random account."""
+    """Generate a random buy/sell/query/cancel from a random account.
+
+    Prices are concentrated in the 40–60 range so buy and sell orders are likely
+    to cross, preventing unbounded order-book growth across iterations.
+    """
     acct = f"{_ACCOUNT_PREFIX}{random.randint(0, _ACCOUNT_COUNT - 1)}"
     op = random.choice(['buy', 'sell', 'query', 'cancel'])
     xml_str = f'<?xml version="1.0" encoding="UTF-8"?>\n<transactions id="{acct}">\n'
     if op == 'buy':
-        xml_str += generate_indent() + f'<order sym="{_SYMBOL}" amount="{random.randint(1, 100)}" limit="{random.uniform(10, 100):.2f}"/>\n'
+        xml_str += generate_indent() + f'<order sym="{_SYMBOL}" amount="{random.randint(1, 100)}" limit="{random.uniform(40, 60):.2f}"/>\n'
     elif op == 'sell':
-        xml_str += generate_indent() + f'<order sym="{_SYMBOL}" amount="-{random.randint(1, 10)}" limit="{random.uniform(10, 100):.2f}"/>\n'
+        xml_str += generate_indent() + f'<order sym="{_SYMBOL}" amount="-{random.randint(1, 10)}" limit="{random.uniform(40, 60):.2f}"/>\n'
     elif op == 'query':
         xml_str += generate_indent() + f'<query id="{random.randint(1, 500)}"/>\n'
     else:
@@ -67,14 +71,18 @@ def _random_request():
 
 
 def _order_only_request():
-    """Buy or sell only — used for latency measurement (same path as match-only timer)."""
+    """Buy or sell only — used for latency measurement (same path as match-only timer).
+
+    Prices are concentrated in the 40–60 range so buy and sell orders are likely
+    to cross, keeping the order book from accumulating stale entries across iterations.
+    """
     acct = f"{_ACCOUNT_PREFIX}{random.randint(0, _ACCOUNT_COUNT - 1)}"
     op = random.choice(['buy', 'sell'])
     xml_str = f'<?xml version="1.0" encoding="UTF-8"?>\n<transactions id="{acct}">\n'
     if op == 'buy':
-        xml_str += generate_indent() + f'<order sym="{_SYMBOL}" amount="{random.randint(1, 100)}" limit="{random.uniform(10, 100):.2f}"/>\n'
+        xml_str += generate_indent() + f'<order sym="{_SYMBOL}" amount="{random.randint(1, 50)}" limit="{random.uniform(40, 60):.2f}"/>\n'
     else:
-        xml_str += generate_indent() + f'<order sym="{_SYMBOL}" amount="-{random.randint(1, 10)}" limit="{random.uniform(10, 100):.2f}"/>\n'
+        xml_str += generate_indent() + f'<order sym="{_SYMBOL}" amount="-{random.randint(1, 10)}" limit="{random.uniform(40, 60):.2f}"/>\n'
     xml_str += '</transactions>\n'
     return str(len(xml_str)) + "\n" + xml_str
 
@@ -160,8 +168,11 @@ def run_performance_test(core_counts, iterations=10):
         for i in range(iterations):
             print(f"  [{cores} cores] iteration {i+1}/{iterations}")
             open(MATCH_LATENCY_FILE, 'w').close()
-
             tp = measure_throughput(500)
+
+            # Clear match latency file so latency probe samples are not contaminated
+            # by high-contention samples from the throughput phase above.
+            open(MATCH_LATENCY_FILE, 'w').close()
             avg_lat, _ = measure_latency(200)
             samples = _read_match_latencies()
             match_mean = statistics.mean(samples) if samples else 0
