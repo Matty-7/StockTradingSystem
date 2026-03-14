@@ -5,76 +5,48 @@
 - Vincent Choo
 
 ## Overview
-This project implements a stock/commodity exchange matching engine: a server that matches buy and sell orders for a market. The system maintains accounts, positions, and handles order execution following standard market rules.
+This project implements a TCP/XML exchange server for ECE 568 HW4. It supports account and symbol creation, order placement, matching, query, and cancel, with matching behavior following price priority and FIFO tie-break rules.
 
 ## Key Features
-- Account management with balance tracking
-- Symbol creation and position tracking
-- Order placement (buy/sell) with limit prices
-- Order matching using price-time priority
-- Order cancellation and status querying
-- Atomic transaction execution
+- Pre-fork multi-process server on port `12345`
+- Shared database-backed order book for cross-process consistency
+- Atomic order execution and balance/position updates
+- Deadlock-aware retry for transactional order and cancel paths
+- Functional, edge-case, concurrency, and performance test suites
 
-## Running the Application
+## Quick Start
 
-### Prerequisites
-- Docker and docker-compose installed
-- Python 3
-- sqlalchemy
-- psycopg2-binary
-- matplotlib
-
-### Start the Server
-In your first terminal, run:
+### 1) Start services
 ```bash
 docker-compose down && docker-compose up --build
 ```
-This will start the PostgreSQL database and the exchange server.
 
-### Run the Tests
-In a second terminal, run:
+### 2) Run the full test suite
 ```bash
 python3 testing/run_all_tests.py --skip-server
 ```
-The `--skip-server` flag indicates that the tests should use the already running server instance from the first terminal.
 
-if you encounter port 5432 conflict, you can try terminal command:
-
+### 3) Run only performance tests (regenerates charts)
 ```bash
-sudo systemctl stop postgresql
+python3 testing/performance_test.py
 ```
 
-and do the following to check if the port 5432 is free:
-```bash
-sudo lsof -i :5432
-```
+## Project Layout
+- `server.py`: pre-fork TCP server and worker lifecycle
+- `xml_handler.py`: request parsing and response serialization
+- `matching_engine.py`: order validation, matching, execution logic
+- `database.py` and `model.py`: persistence layer and schema
+- `testing/`: functional and scalability tests
+- `writeup/`: report and generated performance figures
 
-if it is free, you can do the following to start the server:
-```bash
-docker-compose down && docker-compose up --build
-```
+## Communication Protocol
+The server accepts requests as:
+1) one line with XML payload length, then
+2) raw XML payload with root `<create>` or `<transactions>`.
 
-## System Design
+Responses always use root `<results>`.
 
-### Core Concepts
-- **Symbol**: An identifier for a stock or commodity (e.g., SPY, BTC)
-- **Position**: Amount of a particular symbol owned by an account
-- **Account**: Contains a balance (USD) and positions in different symbols
-- **Order**: A request to buy or sell with a symbol, amount, and limit price
-- **Order Matching**: Orders match when they are for the same symbol and have compatible prices
-- **Order Execution**: When matched orders result in the exchange of shares and money
-
-### Communication Protocol
-The server uses an XML-based protocol over TCP connections on port 12345:
-- Create accounts and symbols
-- Place buy/sell orders
-- Query order status
-- Cancel open orders
-
-### Order Matching Rules
-- Orders are matched at the best possible price
-- When multiple orders have the same price, earlier orders have priority
-- Orders can be partially executed if no single matching order is available
-
-## Performance and Scalability
-The system is designed to scale across multiple CPU cores. Performance test results are available in the `writeup` directory. 
+## Performance Notes
+Performance and scalability figures are generated from `testing/performance_test.py` and written to:
+- `writeup/throughput_vs_cores.png`
+- `writeup/latency_vs_cores.png`
