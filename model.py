@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey, DateTime, create_engine
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, create_engine, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 import datetime
@@ -45,7 +45,7 @@ class Position(Base):
     symbol = relationship("Symbol", back_populates="positions")
 
     __table_args__ = (
-        # UniqueConstraint('account_id', 'symbol_name', name='_account_symbol_uc'),
+        UniqueConstraint('account_id', 'symbol_name', name='_account_symbol_uc'),
     )
 
     def __repr__(self):

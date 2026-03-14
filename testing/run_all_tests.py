@@ -2,8 +2,6 @@ import subprocess
 import os
 import time
 import argparse
-import io
-import sys
 from datetime import datetime
 
 def run_all_tests(skip_server=False):

@@ -3,12 +3,10 @@ import time
 import socket
 import statistics
 import matplotlib.pyplot as plt
-import numpy as np
 import os
-import psutil
-import shutil
 import subprocess
 import random
+import sys
 from client_test import send_xml_to_server, generate_indent
 
 def measure_latency(request_count):
@@ -80,9 +78,9 @@ def set_core_count(cores):
         # Find process using port 12345
         result = subprocess.run(["lsof", "-i", ":12345", "-t"], capture_output=True, text=True)
         if result.stdout.strip():
-            pid = result.stdout.strip()
-            print(f"Killing existing server process (PID: {pid})...")
-            subprocess.run(["kill", pid], check=False)
+            pids = [pid.strip() for pid in result.stdout.splitlines() if pid.strip()]
+            print(f"Killing existing server process(es): {', '.join(pids)}...")
+            subprocess.run(["kill", *pids], check=False)
             time.sleep(2)  # Wait for server to terminate
     except Exception as e:
         print(f"Warning: Unable to kill existing server: {e}")
@@ -97,7 +95,7 @@ def set_core_count(cores):
         
         # Start server in background
         print(f"Starting server with {cores} cores...")
-        subprocess.Popen(["python3", server_path], env=server_env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.Popen([sys.executable, server_path], env=server_env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         
         # Wait for server to initialize
         time.sleep(3)

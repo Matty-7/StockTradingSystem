@@ -1,9 +1,7 @@
 import socket
 import threading
-import time
 import xml.etree.ElementTree as ET
 import random
-import sys
 from client_test import generate_indent, send_xml_to_server
 
 # Test setup parameters
@@ -15,6 +13,7 @@ SYMBOL = "TESTSTOCK"    # Test stock symbol
 # Result tracking
 success_count = 0
 error_count = 0
+business_reject_count = 0
 race_condition_count = 0
 success_lock = threading.Lock()
 
@@ -74,11 +73,12 @@ def parse_order_id(response):
 
 def concurrent_worker(thread_id, client_socket):
     """Work performed by each concurrent thread"""
-    global success_count, error_count, race_condition_count, order_tracking
+    global success_count, error_count, business_reject_count, race_condition_count, order_tracking
 
     # Track operations locally for this thread
     local_success = 0
     local_error = 0
+    local_business_reject = 0
     local_race = 0
     operations_completed = 0
     operations_expected = OPERATIONS_PER_THREAD
@@ -237,6 +237,17 @@ def concurrent_worker(thread_id, client_socket):
             if '<error' in response:
                 if 'race' in response.lower() or 'concurrent' in response.lower():
                     local_race += 1
+                elif any(msg in response.lower() for msg in [
+                    'insufficient funds',
+                    'insufficient shares',
+                    'order not found',
+                    'order already fully executed or canceled',
+                    'order already canceled',
+                    'permission denied',
+                    'invalid transaction id format',
+                    'account'
+                ]):
+                    local_business_reject += 1
                 else:
                     local_error += 1
             else:
@@ -259,13 +270,21 @@ def concurrent_worker(thread_id, client_socket):
         with success_lock:
             success_count += local_success
             error_count += local_error
+            business_reject_count += local_business_reject
             race_condition_count += local_race
 
-        print(f"Thread {thread_id} completed: success={local_success}, errors={local_error}, race_conditions={local_race}, total={local_success + local_error + local_race}")
+        print(
+            f"Thread {thread_id} completed: success={local_success}, "
+            f"business_rejects={local_business_reject}, errors={local_error}, "
+            f"race_conditions={local_race}, total={local_success + local_business_reject + local_error + local_race}"
+        )
         
         # Sanity check
-        if local_success + local_error + local_race != operations_expected:
-            print(f"WARNING: Thread {thread_id} count mismatch! Expected {operations_expected}, counted {local_success + local_error + local_race}")
+        if local_success + local_business_reject + local_error + local_race != operations_expected:
+            print(
+                f"WARNING: Thread {thread_id} count mismatch! Expected {operations_expected}, "
+                f"counted {local_success + local_business_reject + local_error + local_race}"
+            )
 
 def execute_buy(account_id, amount, price, client_socket):
     """Execute buy operation"""
@@ -314,9 +333,10 @@ def run_concurrency_test():
         print("Connected to server, starting concurrency test...")
 
         # reset global variables
-        global success_count, error_count, race_condition_count, order_tracking
+        global success_count, error_count, business_reject_count, race_condition_count, order_tracking
         success_count = 0
         error_count = 0
+        business_reject_count = 0
         race_condition_count = 0
         order_tracking = {}
 
@@ -343,11 +363,14 @@ def run_concurrency_test():
         # calculate success rate
         total_ops = NUM_THREADS * OPERATIONS_PER_THREAD
         success_rate = (success_count / total_ops) * 100 if total_ops > 0 else 0
+        protocol_correct_rate = ((success_count + business_reject_count) / total_ops) * 100 if total_ops > 0 else 0
 
         print("\n=================== CONCURRENCY TEST RESULTS ===================")
         print(f"Total operations: {total_ops}")
         print(f"Successful operations: {success_count} ({success_rate:.2f}%)")
+        print(f"Business rejected operations (expected): {business_reject_count}")
         print(f"Error operations: {error_count}")
+        print(f"Protocol-correct responses (success + expected reject): {protocol_correct_rate:.2f}%")
         print("=================================================")
 
     except Exception as e:

@@ -1,9 +1,5 @@
-import string
 import socket
 import xml.etree.ElementTree as ET
-import xml.dom.minidom
-import io
-import time
 
 def generate_indent(level=1):
   """
@@ -95,10 +91,6 @@ def test_transaction_symbol_error_and_short_error():
   xml_str += '</transactions>\n'
 
   return str(len(xml_str)) + "\n" + xml_str
-
-def test_transaction_errors():
-  send_xml_to_server(test_transaction_DNE())
-  send_xml_to_server(test_transaction_symbol_error_and_short_error())
 
 def setup_test_transcation_matching():
   """

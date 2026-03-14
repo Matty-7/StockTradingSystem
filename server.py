@@ -1,13 +1,10 @@
 import socket
-import threading
-import xml.etree.ElementTree as ET
 from database import Database
 from xml_handler import XMLHandler
 from matching_engine import MatchingEngine
 import os
 import logging
 import time
-import multiprocessing
 import signal
 import selectors
 import sys
