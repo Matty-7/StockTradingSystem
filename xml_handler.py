@@ -2,6 +2,7 @@ import xml.etree.ElementTree as ET
 import time
 import datetime
 import logging
+import random
 from model import Account, Position, Order, Execution
 from sqlalchemy.exc import OperationalError
 
@@ -335,8 +336,8 @@ class XMLHandler:
             error_elem.text = "Invalid transaction ID format"
             return
 
-        max_retries = 3
-        backoff_seconds = 0.03
+        max_retries = 8
+        backoff_seconds = 0.02
         for attempt in range(max_retries):
             try:
                 # Get current session
@@ -443,7 +444,7 @@ class XMLHandler:
                 pgcode = getattr(getattr(e, "orig", None), "pgcode", None)
                 retryable = pgcode in {"40P01", "40001"}
                 if retryable and attempt < max_retries - 1:
-                    wait_s = backoff_seconds * (2 ** attempt)
+                    wait_s = backoff_seconds * (2 ** attempt) + random.uniform(0.0, 0.01)
                     logger.warning(
                         f"Retrying cancel after transient DB error pgcode={pgcode}, "
                         f"attempt {attempt + 1}/{max_retries}, sleep={wait_s:.3f}s"

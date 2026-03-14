@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, create_engine, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 import datetime
@@ -85,22 +85,3 @@ class Execution(Base):
 
     def __repr__(self):
         return f"<Execution(order_id={self.order_id}, shares={self.shares}, price={self.price})>"
-
-def init_db(db_url):
-    """Initialize the database: create all tables"""
-    engine = create_engine(db_url)
-    Base.metadata.create_all(engine)
-    return engine
-
-
-def reset_db(db_url):
-    """Reset the database: drop all tables and recreate them."""
-    engine = create_engine(db_url)
-
-    # Drop all tables
-    Base.metadata.drop_all(engine)
-
-    # Create all tables
-    Base.metadata.create_all(engine)
-
-    return engine

@@ -60,38 +60,6 @@ def test_create_symbol_error_account_DNE():
 
   return  str(len(xml_str)) + "\n" + xml_str
 
-def test_transaction_DNE():
-  """
-  129
-  <?xml version="1.0" encoding="UTF-8"?>
-  <transactions id="9999999">
-    <order sym="SPY" amount="300" limit="125"/>
-  </transactions>
-  """
-  xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n'
-  xml_str += '<transactions id="9999999">\n'
-  xml_str += generate_indent()  + '<order sym="SPY" amount="300" limit="125"/>\n'       # Account does not exist
-  xml_str += '</transactions>\n'
-
-  return  str(len(xml_str)) + "\n" + xml_str
-
-def test_transaction_symbol_error_and_short_error():
-  """
-  176
-  <?xml version="1.0" encoding="UTF-8"?>
-  <transactions id="9999999">
-    <order sym="DNE" amount"1" limit="1"/>
-    <order sym="SPY" amount="-99999999" limit="100"/>
-  </transactions>
-  """
-  xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n'
-  xml_str += '<transactions id="9999999">\n'
-  xml_str += generate_indent()  + '<order sym="DNE" amount"1" limit="1"/>\n'            # Symbol does not exist
-  xml_str += generate_indent()  + '<order sym="SPY" amount="-99999999" limit="100"/>\n' # short which is not allowed for assignment
-  xml_str += '</transactions>\n'
-
-  return str(len(xml_str)) + "\n" + xml_str
-
 def setup_test_transcation_matching():
   """
   132

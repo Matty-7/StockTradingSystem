@@ -1,6 +1,7 @@
 import threading
 import logging
 import time
+import random
 from sqlalchemy.exc import OperationalError
 from database import Account, Position
 from collections import defaultdict
@@ -109,8 +110,8 @@ class MatchingEngine:
 
     def place_order(self, account_id, symbol, amount, limit_price):
         """Place an order and try to match it"""
-        max_retries = 3
-        backoff_seconds = 0.03
+        max_retries = 8
+        backoff_seconds = 0.02
 
         for attempt in range(max_retries):
             order_id = None
@@ -170,7 +171,7 @@ class MatchingEngine:
                     pgcode = getattr(getattr(e, "orig", None), "pgcode", None)
                     retryable = pgcode in {"40P01", "40001"}
                     if retryable and attempt < max_retries - 1:
-                        wait_s = backoff_seconds * (2 ** attempt)
+                        wait_s = backoff_seconds * (2 ** attempt) + random.uniform(0.0, 0.01)
                         self.logger.warning(
                             f"Retrying place_order after transient DB error pgcode={pgcode}, "
                             f"attempt {attempt + 1}/{max_retries}, sleep={wait_s:.3f}s"
