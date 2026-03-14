@@ -1,5 +1,5 @@
 # ECE 568 — High-Performance Exchange Matching Server
-**Authors:** Jingheng Huan · Vincent Choo &nbsp;|&nbsp; Duke University, ECE Department
+**Author:** Jingheng Huan &nbsp;|&nbsp; Duke University, ECE Department
 
 ---
 

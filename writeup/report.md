@@ -1,6 +1,6 @@
 # ECE 568: HW4 Exchange Matching Server
 
-Authors: Jingheng Huan, Vincent Choo
+Author: Jingheng Huan
 
 ## Introduction
 

@@ -3,7 +3,6 @@
 ## Authors
 
 - Jingheng Huan
-- Vincent Choo
 
 ## Overview
 
