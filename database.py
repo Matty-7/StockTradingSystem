@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, event, asc, desc, update as sql_update
+from sqlalchemy import create_engine, event, asc, desc, update as sql_update, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import sessionmaker, scoped_session
 from contextlib import contextmanager
@@ -230,6 +230,17 @@ class Database:
         finally:
             if close_session:
                 session.close()
+
+    def notify_new_order(self, order, session) -> None:
+        """Broadcast a newly placed open order to all worker processes via pg_notify.
+
+        Payload format: "<order_id>,<is_buy>,<price>,<created_at_iso>"
+        Receivers add the order directly to their in-memory book, eliminating the
+        DB fallback scan for cross-worker orders.
+        """
+        is_buy = 1 if order.open_shares > 0 else 0
+        payload = f"{order.id},{is_buy},{float(order.limit_price)},{order.created_at.isoformat()}"
+        session.execute(text("SELECT pg_notify('new_order', :payload)"), {"payload": payload})
 
     def execute_order_part(self, order, shares, price, session=None) -> None:
         """Update open_shares on an order and record the execution."""

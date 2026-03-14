@@ -8,7 +8,10 @@ import time
 import signal
 import selectors
 import sys
+import threading
 import psutil
+import psycopg2
+import psycopg2.extensions
 from urllib.parse import urlparse, urlunparse
 
 logging.basicConfig(level=logging.INFO,
@@ -92,6 +95,55 @@ class PreForkServer:
         
         logger.info(f"Pre-forked {self.num_workers} worker processes: {self.workers}")
     
+    def _start_order_book_listener(self, matching_engine):
+        """Start a background thread that listens for new_order NOTIFY events.
+
+        When another worker places an order with open shares, it broadcasts the
+        order details via pg_notify('new_order', payload).  This thread receives
+        those notifications and inserts the order into the local in-memory book,
+        eliminating the DB fallback scan for cross-worker orders.
+
+        Payload format: "<order_id>,<is_buy>,<price>,<created_at_iso>"
+        """
+        def _listen():
+            import datetime
+            try:
+                conn = psycopg2.connect(self.db_url)
+                conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
+                cur = conn.cursor()
+                cur.execute("LISTEN new_order;")
+                logger.info(f"Worker {os.getpid()} listening on 'new_order' channel")
+                while self.running:
+                    if not self.running:
+                        break
+                    # Poll with 1-second timeout so we can check self.running
+                    import select as _select
+                    readable, _, _ = _select.select([conn], [], [], 1.0)
+                    if readable:
+                        conn.poll()
+                        while conn.notifies:
+                            notify = conn.notifies.pop(0)
+                            try:
+                                parts = notify.payload.split(",", 3)
+                                order_id = int(parts[0])
+                                is_buy = parts[1] == "1"
+                                price = float(parts[2])
+                                created_at = datetime.datetime.fromisoformat(parts[3])
+                                matching_engine.order_book._insert(order_id, price, created_at, is_buy)
+                            except Exception as e:
+                                logger.warning(f"Failed to parse new_order notify payload '{notify.payload}': {e}")
+            except Exception as e:
+                logger.error(f"Order book listener thread error: {e}")
+            finally:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+
+        t = threading.Thread(target=_listen, daemon=True)
+        t.start()
+        return t
+
     def worker_process_connections(self):
         """Worker process accepts and handles connections"""
         # Create database connection
@@ -100,6 +152,9 @@ class PreForkServer:
         with database.session_scope() as session:
             matching_engine.load_order_book(session)
         xml_handler = XMLHandler(database, matching_engine)
+
+        # Start background thread to receive cross-worker order book updates.
+        self._start_order_book_listener(matching_engine)
         
         # Set up selector to monitor the server socket
         selector = selectors.DefaultSelector()

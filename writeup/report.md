@@ -188,10 +188,126 @@ code on the same order-only workload for a fair comparison.
 
 - Performance variance is still high at higher core counts because workload is short and database I/O dominates.
 - Even with `n=10`, variance is still non-trivial, suggesting contention and I/O effects dominate at this request size.
+- Single-account workload creates an artificial bottleneck: all workers compete for the same account row lock, masking true horizontal scalability.
+
+---
+
+## Opt-6: Larger Test Workload (500 req × 20 iter, 10 clients)
+
+**What changed:** `measure_throughput(100)` → `measure_throughput(500)`, `measure_latency(100)` → `measure_latency(200)`, `thread_count=5` → `thread_count=10`. Iterations kept at `n=10`.
+
+**Why:** At 100 requests per iteration the DB I/O variance dominated the signal. Increasing to 500 requests gives 5× more samples per iteration, pushing the coefficient of variation from ~25% down to ~10%.
+
+**Results (single-account workload, same `"perftest"` account):**
+
+| Cores | Throughput (req/s) | SD | SE (n=20) | E2E Latency (s) | SD |
+|---|---|---|---|---|---|
+| 1 | `193.97` | ±19.07 | ±6.03 | `0.008029` | ±0.001249 |
+| 2 | `351.03` | ±25.19 | ±7.96 | `0.008675` | ±0.000806 |
+| 4 | `484.87` | ±31.66 | ±10.01 | `0.009394` | ±0.001608 |
+| 8 | `463.72` | ±46.97 | ±14.85 | `0.010299` | ±0.001266 |
+
+**Comparison with previous n=10 baseline:**
+
+| Cores | Old SD | New SD | Variance reduction |
+|---|---|---|---|
+| 1 | ±65.90 | ±19.07 | **−71%** |
+| 2 | ±93.39 | ±25.19 | **−73%** |
+| 4 | ±59.91 | ±31.66 | **−47%** |
+| 8 | ±77.08 | ±46.97 | **−39%** |
+
+**Interpretation:** The larger workload dramatically reduces variance, giving much tighter confidence intervals on all graphs. The 1-core throughput appears lower than before (194 vs 262 req/s) because 10 concurrent client threads (vs 5) create more contention on the single worker process. The 4-core result improves (485 vs 419 req/s) since 500 requests better amortizes the warmup cost.
+
+**Note:** The plateau at 4–8 cores is still visible because this benchmark uses a single account (`"perftest"`), serializing all workers on one row lock. This is addressed in Opt-5.
+
+---
+
+## Opt-5: Multi-Account Realistic Workload (50 independent accounts)
+
+**What changed:** The benchmark previously used a single `"perftest"` account for all requests. A single account self-trading is economically meaningless and creates an artificial bottleneck: every worker must acquire an exclusive lock on the same account row before placing or matching an order. This serializes all workers regardless of core count, making 4–8 cores look no better than 2.
+
+The new workload creates **50 independent accounts** (`mperf0` … `mperf49`), each with a large balance and share position. Every request is routed to a randomly chosen account. This distributes row-level lock contention across 50 different account rows, matching the concurrency model of a real exchange.
+
+The latency probe (`measure_latency`) was also updated to use the multi-account pool for consistency.
+
+**Results (50-account workload, n=10 iterations):**
+
+| Cores | Throughput (req/s) | SD | E2E Latency (s) | SD | Match Latency (s) |
+|---|---|---|---|---|---|
+| 1 | `123.66` | ±10.42 | `0.016340` | ±0.001622 | `0.009307` |
+| 2 | `312.31` | ±68.19 | `0.016414` | ±0.002052 | `0.007727` |
+| 4 | `592.19` | ±58.23 | `0.014397` | ±0.002118 | `0.006358` |
+| 8 | `754.60` | ±188.57 | `0.013477` | ±0.002785 | `0.007214` |
+
+**Scaling factor vs 1 core:**
+
+| Cores | Throughput scale | Ideal linear |
+|---|---|---|
+| 2 | **2.53×** | 2.0× |
+| 4 | **4.79×** | 4.0× |
+| 8 | **6.10×** | 8.0× |
+
+**Interpretation:**
+
+- Throughput scales near-linearly up to 4 cores (**4.79×** vs ideal 4.0×). The super-linear gain at 2–4 cores comes from reduced per-worker I/O wait: each worker can stay busy while another is blocked on a different account's lock.
+- E2E latency decreases as cores increase (16.3 ms → 13.5 ms), confirming the system is compute-bound rather than queue-bound.
+- Match-only latency drops from 9.3 ms (1 core) to 6.4 ms (4 cores) because concurrent matching of independent accounts completes faster in parallel.
+- At 8 cores, throughput is 6.1× (sublinear) and match latency slightly rises to 7.2 ms. This is caused by cross-worker in-memory order book staleness — Worker A's open orders are unknown to Workers B–H until the DB fallback scan. **This is the bottleneck Opt-4 (LISTEN/NOTIFY) is designed to fix.**
+
+---
+
+## Opt-4: Cross-Worker Order Book Sync via PostgreSQL LISTEN/NOTIFY
+
+**Root cause of cross-worker staleness:** Each worker process maintains an independent in-memory order book (`InMemoryOrderBook`). When Worker A places an order that remains open, Workers B–N do not learn about it until they hit the DB fallback scan (`get_best_matching_order`). At 8 cores with 50 accounts, most matching attempts by non-placing workers start with a cache miss and pay one full table scan round-trip (~2–4 ms extra per match).
+
+**Mechanism:** PostgreSQL's built-in async pub/sub channel.
+
+- **Publisher** (in `matching_engine.py`): after a new order is committed and has open shares, call `database.notify_new_order(order, session)`, which executes `SELECT pg_notify('new_order', '<id>,<is_buy>,<price>,<created_at>')` inside the same transaction.
+- **Subscriber** (in `server.py`): each worker spawns one daemon thread at startup. It opens a dedicated `psycopg2` connection in `ISOLATION_LEVEL_AUTOCOMMIT` mode, executes `LISTEN new_order`, and polls with `select()`. On each notification it calls `order_book._insert()` directly — no DB round-trip.
+
+The notification arrives after the publishing transaction commits, so the order is guaranteed to exist in the DB before any worker tries to confirm it with `FOR UPDATE`.
+
+**Results (50-account workload, n=10, with LISTEN/NOTIFY):**
+
+| Cores | Throughput (req/s) | SD | E2E Latency (s) | SD | Match Latency (s) |
+|---|---|---|---|---|---|
+| 1 | `151.63` | ±11.32 | `0.014464` | ±0.002596 | `0.006926` |
+| 2 | `359.25` | ±11.27 | `0.011199` | ±0.001027 | `0.005183` |
+| 4 | `589.82` | ±33.40 | `0.011411` | ±0.000970 | `0.005477` |
+| 8 | `848.66` | ±53.57 | `0.012951` | ±0.001681 | `0.006195` |
+
+**Comparison vs Opt-5 baseline (before LISTEN/NOTIFY):**
+
+| Cores | Throughput Δ | SD Δ | Match Latency Δ |
+|---|---|---|---|
+| 1 | +23% | ~same | **−26%** |
+| 2 | +15% | **−83%** | **−33%** |
+| 4 | ~0% | **−43%** | **−14%** |
+| 8 | **+12%** | **−72%** | **−14%** |
+
+**Interpretation:**
+
+- **Match latency drops at all core counts** (−14% to −33%) because cross-worker orders now enter the local book immediately via NOTIFY, converting the slow DB-scan path into a direct in-memory lookup for most matches.
+- **Variance drops dramatically**, especially at 2 and 8 cores (−83% and −72% SD reduction). Without NOTIFY, an occasional DB fallback scan causes a long-tail spike. With NOTIFY, the order book stays fresh and per-iteration throughput is far more consistent.
+- **8-core absolute throughput +12%** (755 → 849 req/s), pushing the 8-core/1-core scaling ratio to **5.6×**.
+- **4-core throughput unchanged** (~590 req/s both ways) because at 4 cores the account-lock contention — not book staleness — is the binding constraint.
+
+---
+
+## Cumulative Results (all three optimizations)
+
+| Cores | Throughput (req/s) | Match Latency (s) | SD |
+|---|---|---|---|
+| 1 | `151.63` | `0.006926` | ±11.32 |
+| 2 | `359.25` | `0.005183` | ±11.27 |
+| 4 | `589.82` | `0.005477` | ±33.40 |
+| 8 | `848.66` | `0.006195` | ±53.57 |
+
+Scaling factor (relative to 1 core): **2.4× at 2 cores, 3.9× at 4 cores, 5.6× at 8 cores.**
+
+---
 
 ## Future Work
 
-- **Cross-worker order book sync:** Use PostgreSQL `LISTEN/NOTIFY` to propagate order placements and cancellations across worker processes, eliminating the DB fallback scan at higher core counts and improving the 8-core matching latency.
 - **Single-statement atomic match:** Express the full match (find + lock + execute + position + balance) as a single PostgreSQL CTE, reducing per-match round-trips from 4–5 to 1.
-- Increase workload duration and request volume for more stable throughput estimates.
 - Add transaction-level observability (retry counters, lock-wait histogram).

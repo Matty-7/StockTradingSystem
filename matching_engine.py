@@ -3,6 +3,7 @@ import logging
 import os
 import time
 import random
+import json
 from sortedcontainers import SortedList
 from sqlalchemy.exc import OperationalError
 from database import Account, Position
@@ -248,6 +249,8 @@ class MatchingEngine:
                         # Done after matching so the book reflects the post-match state.
                         if order.open_shares != 0:
                             self.order_book.add(order)
+                            # Notify other worker processes so they can add it to their books.
+                            self.database.notify_new_order(order, session)
 
                         # If we reached here without exceptions, the DB transaction will commit
                         success = True
