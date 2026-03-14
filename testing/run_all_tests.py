@@ -69,29 +69,9 @@ def run_all_tests(skip_server=False):
                     print(result.stderr)
                     f.write(result.stderr)
             else:
-                msg = f"Warning: Functional test file not found: {client_path}"
+                msg = f"Error: Client test file not found: {client_path}"
                 print(msg)
                 f.write(msg + "\n")
-                
-                # Try alternative file name
-                alt_client_path = os.path.join(current_dir, "client_test.py")
-                if os.path.exists(alt_client_path):
-                    msg = f"Using alternative file: {alt_client_path}"
-                    print(msg)
-                    f.write(msg + "\n")
-                    
-                    result = subprocess.run(["python3", alt_client_path], 
-                                          capture_output=True, 
-                                          text=True)
-                    print(result.stdout)
-                    f.write(result.stdout)
-                    if result.stderr:
-                        print(result.stderr)
-                        f.write(result.stderr)
-                else:
-                    msg = "Error: Client test file not found"
-                    print(msg)
-                    f.write(msg + "\n")
             
             # 3. Run edge case tests
             print("\n=== Running Edge Case Tests ===")
@@ -156,21 +136,17 @@ def run_all_tests(skip_server=False):
             f.write(error_msg + "\n")
             
         finally:
-            # Only try to get server output and shut down if we started it
             if server_process:
-                # Collect server output
-                server_output, _ = server_process.communicate()
-                if server_output:
-                    print("Server output:")
-                    print(server_output)
-                    f.write("\n=== Server Output ===\n")
-                    f.write(server_output)
-                
-                # Shut down server
                 print("Shutting down server...")
                 f.write("\nShutting down server...\n")
                 server_process.terminate()
-                server_process.wait(timeout=5)
+                try:
+                    server_output, _ = server_process.communicate(timeout=5)
+                    if server_output:
+                        f.write("\n=== Server Output ===\n")
+                        f.write(server_output)
+                except subprocess.TimeoutExpired:
+                    server_process.kill()
             else:
                 f.write("\nUsing external server - no shutdown required\n")
         

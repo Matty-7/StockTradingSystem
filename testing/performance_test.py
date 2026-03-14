@@ -12,7 +12,13 @@ from client_test import generate_indent
 MATCH_LATENCY_FILE = '/tmp/match_latencies.csv'
 
 def measure_latency(request_count):
-    """Measure system latency"""
+    """Measure end-to-end latency for order requests only (buy/sell).
+
+    Query and cancel requests skip the matching engine entirely and are ~3x faster,
+    so mixing them with order requests would produce an e2e mean that is incomparable
+    to the server-side match-only latency.  Restricting to buy/sell ensures both
+    metrics cover the same code path.
+    """
     latencies = []
     hostname = socket.gethostname()
     server_address = (hostname, 12345)
@@ -21,7 +27,7 @@ def measure_latency(request_count):
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             client_socket.connect(server_address)
-            request_xml = generate_random_request()
+            request_xml = generate_order_request()
             start_time = time.time()
             send_xml_to_server(request_xml, client_socket)
             end_time = time.time()
@@ -37,6 +43,23 @@ def measure_latency(request_count):
     avg_latency = statistics.mean(latencies)
     std_dev_latency = statistics.stdev(latencies) if len(latencies) > 1 else 0
     return avg_latency, std_dev_latency
+
+
+def generate_order_request():
+    """Generate a buy or sell order request (no query/cancel)."""
+    op_type = random.choice(['buy', 'sell'])
+    xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n'
+    xml_str += '<transactions id="perftest">\n'
+    if op_type == 'buy':
+        amount = random.randint(1, 100)
+        price = random.uniform(10, 100)
+        xml_str += generate_indent() + f'<order sym="PERF" amount="{amount}" limit="{price:.2f}"/>\n'
+    else:
+        amount = random.randint(1, 10)
+        price = random.uniform(10, 100)
+        xml_str += generate_indent() + f'<order sym="PERF" amount="-{amount}" limit="{price:.2f}"/>\n'
+    xml_str += '</transactions>\n'
+    return str(len(xml_str)) + "\n" + xml_str
 
 def _read_match_latencies():
     """Read all matching-engine latency samples written by the server workers."""

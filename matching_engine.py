@@ -43,8 +43,9 @@ class InMemoryOrderBook:
         self._asks: SortedList = SortedList(key=lambda x: (x[0], x[1], x[2]))
         # bids: (-price ASC, created_at ASC, order_id ASC) — highest bid first
         self._bids: SortedList = SortedList(key=lambda x: (x[0], x[1], x[2]))
-        self._ask_ids: set = set()
-        self._bid_ids: set = set()
+        # Reverse-lookup dicts for O(log n) removal by order_id.
+        self._bid_map: dict = {}  # order_id → tuple stored in _bids
+        self._ask_map: dict = {}  # order_id → tuple stored in _asks
 
     def load_from_db(self, session):
         """Populate from the DB snapshot of all currently open orders."""
@@ -59,13 +60,15 @@ class InMemoryOrderBook:
 
     def _insert(self, order_id: int, price: float, created_at, is_buy: bool) -> None:
         if is_buy:
-            if order_id not in self._bid_ids:
-                self._bids.add((-price, created_at, order_id))
-                self._bid_ids.add(order_id)
+            if order_id not in self._bid_map:
+                entry = (-price, created_at, order_id)
+                self._bids.add(entry)
+                self._bid_map[order_id] = entry
         else:
-            if order_id not in self._ask_ids:
-                self._asks.add((price, created_at, order_id))
-                self._ask_ids.add(order_id)
+            if order_id not in self._ask_map:
+                entry = (price, created_at, order_id)
+                self._asks.add(entry)
+                self._ask_map[order_id] = entry
 
     def add(self, order) -> None:
         with self._lock:
@@ -73,12 +76,14 @@ class InMemoryOrderBook:
 
     def remove(self, order_id: int, is_buy: bool) -> None:
         with self._lock:
-            if is_buy and order_id in self._bid_ids:
-                self._bids.remove(next(e for e in self._bids if e[2] == order_id))
-                self._bid_ids.discard(order_id)
-            elif not is_buy and order_id in self._ask_ids:
-                self._asks.remove(next(e for e in self._asks if e[2] == order_id))
-                self._ask_ids.discard(order_id)
+            if is_buy:
+                entry = self._bid_map.pop(order_id, None)
+                if entry is not None:
+                    self._bids.remove(entry)
+            else:
+                entry = self._ask_map.pop(order_id, None)
+                if entry is not None:
+                    self._asks.remove(entry)
 
     def best_candidate(self, is_buy: bool, limit_price: float):
         """Return (price, created_at, order_id) of the best in-memory counterpart, or None."""
@@ -109,7 +114,7 @@ class MatchingEngine:
         """Call once at worker startup to warm the in-memory book."""
         self.order_book.load_from_db(session)
 
-    def match_orders(self, new_order, session):
+    def match_orders(self, new_order, session) -> None:
         """
         Match new order against the order book.
 
@@ -123,7 +128,6 @@ class MatchingEngine:
         symbol = new_order.symbol_name
         is_buy = new_order.amount > 0
         remaining_shares = abs(new_order.open_shares)
-        executed_orders = []
 
         while remaining_shares > 0:
             candidate = self.order_book.best_candidate(is_buy, float(new_order.limit_price))
@@ -138,7 +142,7 @@ class MatchingEngine:
                 ).with_for_update(skip_locked=True).first()
 
                 if opposite_order is None:
-                    # Stale cache entry — prune and try next candidate.
+                    # Stale or currently-locked cache entry — prune and try next.
                     self.order_book.remove(candidate[2], not is_buy)
                     continue
             else:
@@ -158,30 +162,32 @@ class MatchingEngine:
             opposite_remaining = abs(opposite_order.open_shares)
             executable_shares = min(remaining_shares, opposite_remaining)
             if executable_shares <= 0:
-                continue
+                # Guard against data corruption; cannot make progress — stop.
+                break
 
             execution_price = (opposite_order.limit_price
                                if opposite_order.created_at <= new_order.created_at
                                else new_order.limit_price)
             buyer_id = new_order.account_id if is_buy else opposite_order.account_id
             seller_id = opposite_order.account_id if is_buy else new_order.account_id
-            total_value = float(execution_price) * executable_shares
 
-            new_order_execution = self.database.execute_order_part(
-                new_order, executable_shares, execution_price, session)
-            opposite_order_execution = self.database.execute_order_part(
-                opposite_order, executable_shares, execution_price, session)
+            self.database.execute_order_part(new_order, executable_shares, execution_price, session)
+            self.database.execute_order_part(opposite_order, executable_shares, execution_price, session)
             self.database.update_position(buyer_id, symbol, executable_shares, session)
-            self.database.update_account_balance(seller_id, total_value, session)
+            self.database.update_account_balance(seller_id, float(execution_price) * executable_shares, session)
 
-            executed_orders.append((new_order_execution, opposite_order_execution))
+            # Refund the buyer for price improvement (they were charged at limit_price,
+            # but execution may be at a better price).
+            if is_buy:
+                improvement = float(new_order.limit_price) - float(execution_price)
+                if improvement > 0:
+                    self.database.update_account_balance(buyer_id, improvement * executable_shares, session)
+
             remaining_shares -= executable_shares
 
             # Keep in-memory book in sync with what we just executed.
             if opposite_order.open_shares == 0:
                 self.order_book.remove(opposite_order.id, not is_buy)
-
-        return executed_orders
 
     def place_order(self, account_id, symbol, amount, limit_price):
         """Place an order and try to match it"""

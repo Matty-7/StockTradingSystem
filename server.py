@@ -9,6 +9,7 @@ import signal
 import selectors
 import sys
 import psutil
+from urllib.parse import urlparse, urlunparse
 
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -27,7 +28,18 @@ logger.info(f"Configuring server with {NUM_WORKERS} worker processes")
 
 # Database connection information
 db_url = os.environ.get('DATABASE_URL', 'postgresql://username:password@localhost/exchange')
-logger.info(f"Database URL: {db_url}")
+def _mask_db_url(url: str) -> str:
+    try:
+        parsed = urlparse(url)
+        if parsed.password:
+            masked = parsed._replace(netloc=f"{parsed.username}:***@{parsed.hostname}"
+                                     + (f":{parsed.port}" if parsed.port else ""))
+            return urlunparse(masked)
+    except Exception:
+        pass
+    return "<db_url>"
+
+logger.info(f"Database URL: {_mask_db_url(db_url)}")
 
 class PreForkServer:
     """Pre-fork server model with shared server socket across processes"""
@@ -63,13 +75,13 @@ class PreForkServer:
                 logger.info(f"Worker process {os.getpid()} started")
                 # Ensure it only uses one CPU core if we're doing CPU affinity
                 if self.num_workers <= psutil.cpu_count():
-                    try:
-                        # Set CPU affinity - each worker to a specific core
                         p = psutil.Process(os.getpid())
-                        p.cpu_affinity([i % psutil.cpu_count()])
-                        logger.info(f"Worker {os.getpid()} assigned to CPU core {i % psutil.cpu_count()}")
-                    except Exception as e:
-                        logger.warning(f"Failed to set CPU affinity: {e}")
+                        if hasattr(p, 'cpu_affinity'):
+                            try:
+                                p.cpu_affinity([i % psutil.cpu_count()])
+                                logger.info(f"Worker {os.getpid()} assigned to CPU core {i % psutil.cpu_count()}")
+                            except Exception as e:
+                                logger.warning(f"Failed to set CPU affinity: {e}")
                 
                 # Handle connections in worker
                 self.worker_process_connections()

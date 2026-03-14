@@ -7,7 +7,6 @@ from model import Account, Position, Order, Execution
 from sqlalchemy.exc import OperationalError
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 class XMLHandler:
     def __init__(self, database, matching_engine):
@@ -46,10 +45,17 @@ class XMLHandler:
                 account_id = child.attrib.get('id')
                 balance = child.attrib.get('balance')
                 if account_id is None or balance is None:
-                     logger.warning("Create account missing id or balance") # Use logger
-                     # Add error element
-                     continue
-                success, error = self.database.create_account(account_id, float(balance))
+                    logger.warning("Create account missing id or balance")
+                    continue
+                try:
+                    balance_val = float(balance)
+                except (ValueError, TypeError):
+                    logger.warning(f"Invalid balance value '{balance}' for account {account_id}")
+                    error_elem = ET.SubElement(results_root, 'error')
+                    error_elem.set('id', account_id)
+                    error_elem.text = f"Invalid balance value: {balance}"
+                    continue
+                success, error = self.database.create_account(account_id, balance_val)
                 if success:
                     created = ET.SubElement(results_root, 'created')
                     created.set('id', account_id)
@@ -60,14 +66,22 @@ class XMLHandler:
 
             elif child.tag == 'symbol':
                 symbol = child.attrib.get('sym')
-                if child.attrib.get('sym') is None:
-                     logger.warning("Create symbol missing sym attribute") # Use logger
-                     # Add error element
-                     continue
+                if symbol is None:
+                    logger.warning("Create symbol missing sym attribute")
+                    continue
                 for account_elem in child:
                     if account_elem.tag == 'account':
                         account_id = account_elem.attrib.get('id')
-                        amount = float(account_elem.text)
+                        try:
+                            amount = float(account_elem.text)
+                        except (ValueError, TypeError):
+                            logger.warning(f"Invalid amount '{account_elem.text}' for symbol {symbol}")
+                            error_elem = ET.SubElement(results_root, 'error')
+                            error_elem.set('sym', symbol)
+                            if account_id:
+                                error_elem.set('id', account_id)
+                            error_elem.text = f"Invalid amount value: {account_elem.text}"
+                            continue
 
                         success, error = self.database.create_symbol(symbol, account_id, amount)
                         if success:
@@ -217,8 +231,6 @@ class XMLHandler:
                 else:
                     # Order exists and permission granted, now get the detailed status
                     try:
-                        # Capture ALL data needed from the order within the session
-                        order_id = order_check.id
                         order_amount = order_check.amount
                         order_open_shares = order_check.open_shares
                         order_is_canceled = order_check.canceled_at is not None
@@ -302,47 +314,24 @@ class XMLHandler:
             results_root.append(ET.Element('error', {'error': "Cancel tag missing id attribute"}))
             return
 
-        # Check permission before calling handle_cancel
         try:
-            int(trans_id)
-            # Call handle_cancel with the account ID
-            logger.info(f"Attempting to cancel order ID: {trans_id} (Account: {account_id})")
-            self.handle_cancel(trans_id, results_root, account_id)
-
+            order_id = int(trans_id)
         except ValueError:
             logger.warning(f"Invalid transaction ID format '{trans_id}' in cancel for account {account_id}")
             results_root.append(ET.Element('error', {'id': trans_id, 'error': "Invalid transaction ID format"}))
-        except Exception as e:
-            logger.exception(f"Error checking permission for cancel order ID '{trans_id}' (Account: {account_id})")
-            results_root.append(ET.Element('error', {'id': trans_id, 'error': f'Internal server error during cancel pre-check: {e}'}))
-
-    def handle_cancel(self, trans_id, results_root, requesting_account_id):
-        """Handle a cancel request and append the result XML element to results_root"""
-        try:
-            order_id = int(trans_id)
-
-            # Now use the provided requesting_account_id instead of trying to retrieve it.
-            if not requesting_account_id:
-                # This check might be redundant if handle_transactions validates it, but good for safety
-                logger.error("Missing requesting account ID for cancel operation.")
-                error_elem = ET.SubElement(results_root, 'error', {'id': trans_id})
-                error_elem.text = "Internal error: Missing account context for cancel."
-                return
-
-        except ValueError:
-            # Log error before returning
-            logger.warning(f"Invalid transaction ID format '{trans_id}' in cancel for account {requesting_account_id}")
-            error_elem = ET.SubElement(results_root, 'error', {'id': trans_id})
-            error_elem.text = "Invalid transaction ID format"
             return
+
+        logger.info(f"Attempting to cancel order ID: {order_id} (Account: {account_id})")
+        self.handle_cancel(order_id, trans_id, results_root, account_id)
+
+    def handle_cancel(self, order_id: int, trans_id: str, results_root, requesting_account_id):
+        """Handle a cancel request and append the result XML element to results_root."""
 
         max_retries = 8
         backoff_seconds = 0.02
         for attempt in range(max_retries):
             try:
-                # Get current session
                 with self.database.session_scope() as session:
-                    # Pass requesting account ID for permission check inside cancel_order within our session
                     order = session.query(Order).filter_by(id=order_id).with_for_update().first()
                     if not order:
                         error_elem = ET.SubElement(results_root, 'error', {'id': trans_id})

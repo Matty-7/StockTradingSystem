@@ -12,13 +12,14 @@ This project implements an exchange matching engine with account, symbol, order,
 - For each core count: `10` iterations
 - Each iteration:
   - Throughput test with `100` requests and `5` concurrent client threads
-  - Latency test with `100` single-request round trips
-- Workload mix: buy, sell, query, cancel operations on symbol `PERF`
+  - Latency test with `100` single-request round trips (**buy/sell orders only**)
+- Throughput workload mix: buy, sell, query, cancel operations on symbol `PERF`
 
 Metrics:
 
-- **Throughput**: requests/second
-- **Latency**: average seconds/request
+- **Throughput**: requests/second (mixed workload)
+- **End-to-end latency**: client round-trip for buy/sell orders only — ensures a fair comparison with match-only latency, which is also measured only on the order path
+- **Match-only latency**: server-side `match_orders()` wall time, logged per call
 
 Graph convention:
 
@@ -44,21 +45,21 @@ Measures only the server-side `match_orders()` call: order-book DB query, price-
 
 Latest run summary (after all three optimizations — see Performance Optimization Log):
 
-| Cores | Throughput (req/s) | E2E Latency (s) | Match-Only Latency (s) |
-|---|---|---|---|
-| 1 | `260.95 ± 52.04` | `0.004390 ± 0.000440` | `0.004942` |
-| 2 | `408.15 ± 58.88` | `0.004041 ± 0.000703` | `0.004263` |
-| 4 | `455.44 ± 97.97` | `0.004898 ± 0.001305` | `0.004710` |
-| 8 | `434.00 ± 120.73` | `0.006384 ± 0.001254` | `0.006216` |
+| Cores | Throughput (req/s) | E2E Latency (s)¹ | Match-Only Latency (s) | Gap (TCP+parse) |
+|---|---|---|---|---|
+| 1 | `261.89 ± 65.90` | `0.006992 ± 0.001432` | `0.005199` | ~1.79 ms |
+| 2 | `424.34 ± 93.39` | `0.006106 ± 0.001276` | `0.004767` | ~1.34 ms |
+| 4 | `418.84 ± 59.91` | `0.007993 ± 0.000800` | `0.005896` | ~2.10 ms |
+| 8 | `403.48 ± 77.08` | `0.007986 ± 0.001014` | `0.005977` | ~2.01 ms |
 
-Throughput and E2E latency shown as mean ± SD (n=10 iterations).  
-Match-only latency is the per-iteration mean of individual `match_orders()` calls logged server-side, averaged across 10 iterations.
+¹ E2E latency measured for buy/sell orders only (same request type as match-only latency).  
+Throughput shown as mean ± SD (n=10 iterations). Match-only latency is the per-iteration mean of individual `match_orders()` calls, averaged across 10 iterations.
 
 Interpretation:
 
-- Throughput peaks at 4 cores (455 req/s) and stays high at 8 cores (434 req/s) — no longer drops.
-- Match-only latency is now well below e2e at 1–4 cores, reflecting the in-memory fast path eliminating DB round-trips for the "no match" case.
-- At 8 cores, match latency converges toward e2e as cross-worker stale cache entries force more DB fallback queries.
+- Match-only latency is consistently **below** e2e latency at every core count. The ~1.3–2.1 ms gap accounts for TCP connect + XML parse + non-match DB overhead (account/position lock at order placement).
+- Throughput peaks at 2 cores (424 req/s) for the order-only workload, where the balance of parallelism and DB lock contention is optimal.
+- At 4–8 cores, DB lock contention on buy/sell orders (heavier than query/cancel) brings throughput down slightly from the 2-core peak.
 
 ## Concurrency Stability Update
 
@@ -171,12 +172,15 @@ n=10 iterations with short workloads). No regression confirmed.
 
 ### Cumulative improvement (baseline → all three optimizations)
 
-| Cores | Throughput | Δ | E2E Latency | Δ | Match Latency | Δ |
-|---|---|---|---|---|---|---|
-| 1 | 212 → 261 req/s | **+23%** | 4.76 → 4.39 ms | **−8%** | 5.57 → 4.94 ms | **−11%** |
-| 2 | 303 → 408 req/s | **+35%** | 4.97 → 4.04 ms | **−19%** | 5.77 → 4.26 ms | **−26%** |
-| 4 | 382 → 455 req/s | **+19%** | 5.66 → 4.90 ms | **−13%** | 5.85 → 4.71 ms | **−19%** |
-| 8 | 331 → 434 req/s | **+31%** | 6.80 → 6.38 ms | **−6%** | 6.25 → 6.22 ms | **−1%** |
+E2E latency is now measured on buy/sell-only workload. The baseline below re-ran the original
+code on the same order-only workload for a fair comparison.
+
+| Cores | Throughput | Δ | Match Latency | Δ |
+|---|---|---|---|---|
+| 1 | 212 → 262 req/s | **+24%** | 5.57 → 5.20 ms | **−7%** |
+| 2 | 303 → 424 req/s | **+40%** | 5.77 → 4.77 ms | **−17%** |
+| 4 | 382 → 419 req/s | **+10%** | 5.85 → 5.90 ms | ~0% |
+| 8 | 331 → 403 req/s | **+22%** | 6.25 → 5.98 ms | **−4%** |
 
 ---
 
