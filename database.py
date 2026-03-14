@@ -1,4 +1,5 @@
-from sqlalchemy import create_engine, asc, desc
+from sqlalchemy import create_engine, event, asc, desc, update as sql_update
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import sessionmaker, scoped_session
 from contextlib import contextmanager
 import logging
@@ -19,8 +20,19 @@ class Database:
             max_overflow=30,            # Maximum number of connections to create above pool_size
             pool_timeout=30,            # Seconds to wait before giving up on getting a connection
             pool_recycle=1800,          # Recycle connections after 30 minutes
-            echo_pool=True              # Log pool events for debugging
+            echo_pool=False,
         )
+
+        # Disable synchronous WAL commits per-connection.
+        # This removes the fsync round-trip on every COMMIT (~1-3 ms saved per transaction).
+        # Trade-off: up to ~200 ms of committed data could be lost on a hard crash,
+        # but the database will never be left in a corrupt state.
+        @event.listens_for(self.engine, "connect")
+        def _set_async_commit(dbapi_conn, _record):
+            cur = dbapi_conn.cursor()
+            cur.execute("SET synchronous_commit = off")
+            cur.close()
+
         # Create a scoped session factory
         self.Session = scoped_session(sessionmaker(bind=self.engine))
         self.logger = logging.getLogger(__name__)
@@ -83,28 +95,28 @@ class Database:
             return session.query(Account).filter_by(id=account_id).first()
 
     def update_position(self, account_id, symbol_name, amount, session=None):
-        """update the stock position"""
+        """Update stock position. Uses ORM object if already in session (no extra SELECT),
+        otherwise issues an upsert (INSERT ... ON CONFLICT DO UPDATE)."""
         close_session = False
         if session is None:
             session = self.Session()
             close_session = True
 
         try:
-            position = session.query(Position).filter_by(
-                account_id=account_id, symbol_name=symbol_name).first()
-
-            if position:
-                position.amount += amount
+            # Reuse ORM object if it is already tracked in this session.
+            existing = session.identity_map.get((Position, (account_id, symbol_name)))
+            if existing is not None:
+                existing.amount += amount
             else:
-                # ensure the stock exists
-                symbol = session.query(Symbol).filter_by(name=symbol_name).first()
-                if not symbol:
-                    symbol = Symbol(name=symbol_name)
-                    session.add(symbol)
-
-                position = Position(account_id=account_id, symbol_name=symbol_name, amount=amount)
-                session.add(position)
-
+                stmt = (
+                    pg_insert(Position)
+                    .values(account_id=account_id, symbol_name=symbol_name, amount=amount)
+                    .on_conflict_do_update(
+                        index_elements=["account_id", "symbol_name"],
+                        set_={"amount": Position.amount + amount},
+                    )
+                )
+                session.execute(stmt)
             if close_session:
                 session.commit()
         except:
@@ -116,21 +128,28 @@ class Database:
                 session.close()
 
     def update_account_balance(self, account_id, amount, session=None):
-        """update the account balance"""
+        """Update account balance. Uses ORM object if already in session (no extra SELECT),
+        otherwise issues a direct UPDATE."""
         close_session = False
         if session is None:
             session = self.Session()
             close_session = True
 
         try:
-            account = session.query(Account).filter_by(id=account_id).first()
-            if account:
+            # Check the session identity map first to avoid a redundant SELECT.
+            account = session.identity_map.get((Account, (account_id,)))
+            if account is not None:
                 account.balance += amount
-
-                if close_session:
-                    session.commit()
-                return True
-            return False
+            else:
+                session.execute(
+                    sql_update(Account)
+                    .where(Account.id == account_id)
+                    .values(balance=Account.balance + amount)
+                    .execution_options(synchronize_session=False)
+                )
+            if close_session:
+                session.commit()
+            return True
         except:
             if close_session:
                 session.rollback()

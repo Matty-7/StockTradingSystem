@@ -3,6 +3,7 @@ import logging
 import os
 import time
 import random
+from sortedcontainers import SortedList
 from sqlalchemy.exc import OperationalError
 from database import Account, Position
 from collections import defaultdict
@@ -22,103 +23,163 @@ def _log_match_latency(elapsed: float) -> None:
     except OSError:
         pass
 
+
+class InMemoryOrderBook:
+    """Per-process in-memory order book for fast match-candidate lookup.
+
+    Correctness model (hybrid):
+    - This book is an OPTIMISTIC CACHE.  The DB row lock (WITH FOR UPDATE SKIP LOCKED)
+      remains the authoritative arbiter.
+    - Stale entries (orders already executed by another worker) are discovered lazily
+      when the DB FOR UPDATE returns nothing; they are then pruned.
+    - After exhausting all in-memory candidates, match_orders() always falls back to
+      one full DB scan to catch orders placed by other workers that are not yet in
+      this process's cache.
+    """
+
+    def __init__(self):
+        self._lock = threading.Lock()
+        # asks: (price ASC, created_at ASC, order_id ASC) — lowest ask first
+        self._asks: SortedList = SortedList(key=lambda x: (x[0], x[1], x[2]))
+        # bids: (-price ASC, created_at ASC, order_id ASC) — highest bid first
+        self._bids: SortedList = SortedList(key=lambda x: (x[0], x[1], x[2]))
+        self._ask_ids: set = set()
+        self._bid_ids: set = set()
+
+    def load_from_db(self, session):
+        """Populate from the DB snapshot of all currently open orders."""
+        from model import Order
+        open_orders = session.query(Order).filter(
+            Order.open_shares != 0,
+            Order.canceled_at.is_(None),
+        ).all()
+        with self._lock:
+            for o in open_orders:
+                self._insert(o.id, float(o.limit_price), o.created_at, o.open_shares > 0)
+
+    def _insert(self, order_id: int, price: float, created_at, is_buy: bool) -> None:
+        if is_buy:
+            if order_id not in self._bid_ids:
+                self._bids.add((-price, created_at, order_id))
+                self._bid_ids.add(order_id)
+        else:
+            if order_id not in self._ask_ids:
+                self._asks.add((price, created_at, order_id))
+                self._ask_ids.add(order_id)
+
+    def add(self, order) -> None:
+        with self._lock:
+            self._insert(order.id, float(order.limit_price), order.created_at, order.open_shares > 0)
+
+    def remove(self, order_id: int, is_buy: bool) -> None:
+        with self._lock:
+            if is_buy and order_id in self._bid_ids:
+                self._bids.remove(next(e for e in self._bids if e[2] == order_id))
+                self._bid_ids.discard(order_id)
+            elif not is_buy and order_id in self._ask_ids:
+                self._asks.remove(next(e for e in self._asks if e[2] == order_id))
+                self._ask_ids.discard(order_id)
+
+    def best_candidate(self, is_buy: bool, limit_price: float):
+        """Return (price, created_at, order_id) of the best in-memory counterpart, or None."""
+        with self._lock:
+            if is_buy:
+                if self._asks and self._asks[0][0] <= limit_price:
+                    return self._asks[0]
+            else:
+                if self._bids and -self._bids[0][0] >= limit_price:
+                    return self._bids[0]
+        return None
+
+
 class MatchingEngine:
     def __init__(self, database):
         self.database = database
         # Use symbol-scoped lock for in-process serialization.
         # Cross-process consistency is handled by DB row locks.
         self.symbol_locks = defaultdict(threading.Lock)
+        self.order_book = InMemoryOrderBook()
         self.logger = logging.getLogger(__name__)
-    
+
     def get_symbol_lock(self, symbol):
         """Get the lock for a specific symbol"""
         return self.symbol_locks[symbol]
-        
+
+    def load_order_book(self, session) -> None:
+        """Call once at worker startup to warm the in-memory book."""
+        self.order_book.load_from_db(session)
+
     def match_orders(self, new_order, session):
         """
-        Match new order against DB-backed shared order book.
-        Returns a list of executed orders.
+        Match new order against the order book.
+
+        Fast path: check the per-process in-memory book to find candidates without
+        a DB query.  Each candidate is then confirmed with a DB FOR UPDATE lock.
+        Slow path (fallback): after exhausting in-memory candidates, run one full DB
+        scan to catch orders placed by other worker processes since this book was last
+        synced.
         """
         session.add(new_order)
         symbol = new_order.symbol_name
-        logger.info(f"Attempting to match order {new_order.id}: {new_order.amount} shares of {symbol} at limit {new_order.limit_price}")
-
+        is_buy = new_order.amount > 0
+        remaining_shares = abs(new_order.open_shares)
         executed_orders = []
 
-        # Determine if this is a buy or sell order
-        is_buy = new_order.amount > 0
-
-        # Use open_shares as it reflects the current state.
-        remaining_shares = abs(new_order.open_shares)
-
         while remaining_shares > 0:
-            # Query shared DB order book with price priority and FIFO tie-break.
-            opposite_order = self.database.get_best_matching_order(
-                symbol_name=symbol,
-                is_buy_order=is_buy,
-                limit_price=new_order.limit_price,
-                session=session
-            )
-            if not opposite_order:
-                logger.info(f"No more compatible orders for order {new_order.id}")
-                break
+            candidate = self.order_book.best_candidate(is_buy, float(new_order.limit_price))
 
-            # Calculate how many shares can be executed in this match
+            if candidate is not None:
+                # Confirm the candidate is still open and lock it in the DB.
+                from model import Order as OrderModel
+                opposite_order = session.query(OrderModel).filter(
+                    OrderModel.id == candidate[2],
+                    OrderModel.open_shares != 0,
+                    OrderModel.canceled_at.is_(None),
+                ).with_for_update(skip_locked=True).first()
+
+                if opposite_order is None:
+                    # Stale cache entry — prune and try next candidate.
+                    self.order_book.remove(candidate[2], not is_buy)
+                    continue
+            else:
+                # No in-memory candidate: fall back to full DB scan (catches
+                # orders from other worker processes not yet in this cache).
+                opposite_order = self.database.get_best_matching_order(
+                    symbol_name=symbol,
+                    is_buy_order=is_buy,
+                    limit_price=new_order.limit_price,
+                    session=session,
+                )
+                if not opposite_order:
+                    break
+                # Sync the found order into the local book for future lookups.
+                self.order_book.add(opposite_order)
+
             opposite_remaining = abs(opposite_order.open_shares)
             executable_shares = min(remaining_shares, opposite_remaining)
-
             if executable_shares <= 0:
                 continue
 
-            logger.info(f"Matching {executable_shares} shares between orders {new_order.id} and {opposite_order.id}")
-
-            # Determine execution price (use the price of the order that was open first)
-            execution_price = opposite_order.limit_price if opposite_order.created_at <= new_order.created_at else new_order.limit_price
-            logger.info(f"Execution price: {execution_price}")
-
-            # Execute the orders
+            execution_price = (opposite_order.limit_price
+                               if opposite_order.created_at <= new_order.created_at
+                               else new_order.limit_price)
             buyer_id = new_order.account_id if is_buy else opposite_order.account_id
             seller_id = opposite_order.account_id if is_buy else new_order.account_id
-
-            # Record execution for the new order
-            new_order_execution = self.database.execute_order_part(
-                new_order,
-                executable_shares,
-                execution_price,
-                session
-            )
-
-            # Record execution for the opposite order
-            opposite_order_execution = self.database.execute_order_part(
-                opposite_order,
-                executable_shares,
-                execution_price,
-                session
-            )
-
-            # Update account positions and balances
-            # Calculate total value of the transaction
             total_value = float(execution_price) * executable_shares
 
-            # Update buyer's position (add shares)
-            self.database.update_position(buyer_id, new_order.symbol_name, executable_shares, session)
-
-            # Update seller's balance (add money)
+            new_order_execution = self.database.execute_order_part(
+                new_order, executable_shares, execution_price, session)
+            opposite_order_execution = self.database.execute_order_part(
+                opposite_order, executable_shares, execution_price, session)
+            self.database.update_position(buyer_id, symbol, executable_shares, session)
             self.database.update_account_balance(seller_id, total_value, session)
 
-            logger.info(f"Executed {executable_shares} shares at {execution_price}: " +
-                        f"Order {new_order.id} has {new_order.open_shares} open shares, " +
-                        f"Order {opposite_order.id} has {opposite_order.open_shares} open shares")
-
-            # Record executed transactions for return
             executed_orders.append((new_order_execution, opposite_order_execution))
-
-            # Update remaining shares to match
             remaining_shares -= executable_shares
-            logger.info(
-                f"Post-match: order {new_order.id} open={new_order.open_shares}, "
-                f"order {opposite_order.id} open={opposite_order.open_shares}"
-            )
+
+            # Keep in-memory book in sync with what we just executed.
+            if opposite_order.open_shares == 0:
+                self.order_book.remove(opposite_order.id, not is_buy)
 
         return executed_orders
 
@@ -176,6 +237,11 @@ class MatchingEngine:
                         _match_start = time.time()
                         self.match_orders(order, session)
                         _log_match_latency(time.time() - _match_start)
+
+                        # Add the order to the in-memory book if it has remaining open shares.
+                        # Done after matching so the book reflects the post-match state.
+                        if order.open_shares != 0:
+                            self.order_book.add(order)
 
                         # If we reached here without exceptions, the DB transaction will commit
                         success = True

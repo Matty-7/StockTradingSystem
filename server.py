@@ -85,6 +85,8 @@ class PreForkServer:
         # Create database connection
         database = Database(self.db_url)
         matching_engine = MatchingEngine(database)
+        with database.session_scope() as session:
+            matching_engine.load_order_book(session)
         xml_handler = XMLHandler(database, matching_engine)
         
         # Set up selector to monitor the server socket
